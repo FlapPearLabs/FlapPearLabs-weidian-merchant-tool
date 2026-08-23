@@ -1,55 +1,66 @@
-# Origin, Provenance & Contribution Boundary
+# 项目来源、证据链与贡献边界
 
-A credible portfolio should distinguish **inherited work** from **project contributions**.
+**中文** | [English](ORIGIN_AND_PROVENANCE.en.md)
 
-## Inherited starting point
+一份可信的求职作品必须明确区分：**哪些能力来自继承的原始工具，哪些是本项目后续完成的分析、重构和工程贡献。**
 
-The project began from a third-party Windows package described as `微店商品导出器-v1.2.0-客户版`, already used in a real merchant workflow.
+## 1. 继承的起点
 
-Static analysis showed the inherited package contained:
+项目起点是一份第三方 Windows 软件包：`微店商品导出器-v1.2.0-客户版`，此前已经用于真实商家商品迁移流程。
 
-- a small .NET C# protected launcher;
-- encrypted launcher/business-runtime payloads;
-- bundled Node.js runtime;
-- Playwright + ExcelJS dependencies;
-- a mall Excel template;
-- logic for public Weidian product acquisition and workbook generation.
+静态分析确认原始包中已有：
 
-The inherited binary/source is **not claimed as original work by this repository** and is not redistributed in this portfolio archive.
+- 一个小型 .NET C# 保护启动器；
+- 加密/保护的 launcher 和业务 runtime payload；
+- Node.js runtime；
+- Playwright + ExcelJS 依赖；
+- 商城 Excel 模板；
+- 读取公开微店商品并生成 workbook 的基础业务逻辑。
 
-## Project work layered on top
+这个仓库**不声称这些继承能力是从零原创**，也不会在公开求职仓库中重新分发第三方原始客户端二进制。
 
-The portfolio contribution is the evidence-driven analysis, redesign and iterative engineering work after obtaining that baseline, including:
+## 2. 本项目在此基础上的贡献
 
-1. recovering and documenting the boot/data path;
-2. validating the mall import contract through real success/failure samples;
-3. controlled category/keyword/ID/latest acquisition modes;
-4. `addTime`-based latest ordering and cheap-index/expensive-detail separation;
-5. request-budget and cooldown design;
-6. reconstruction of historical product entities from past mall imports;
-7. five-layer entity deduplication and three-state decisions;
-8. browser-Canvas dHash cache and evidence hierarchy;
-9. duplicate final-spec regression based on actual mall failure data;
-10. true-N-new incremental acquisition;
-11. fuzzy multi-target search, manual selection and category routing;
-12. single-screen terminal UX;
-13. state separation into GitHub / disposable Release / external SQLite;
-14. run/export ledgers, health anchors, checkpoints, mall-confirmation state and recovery tooling.
+在获得这个基线后，后续项目贡献主要包括：
 
-## Historical version packets
+1. 恢复和记录 EXE / DAT / 启动链 / 业务 runtime；
+2. 从函数级继续做到字段级数据 lineage；
+3. 建立真实商品列表 / SKU / 详情 / 分类行为的只读运行时探针；
+4. 用真实商城成功/失败导入样本验证 31 列导入契约；
+5. 增加分类、关键词、分类+关键词、指定 ID/链接、最新商品等可控采集模式；
+6. 用 `addTime` 建立真实最新排序，并拆分轻量索引与昂贵详情抓取；
+7. 建立请求预算、低频扫描、冷却和主动停止策略；
+8. 解析全部历史商城 Excel，将 SKU/data rows 重建为历史商品实体；
+9. 设计五层商品实体去重和 `DUPLICATE_CONFIRMED / NEW_CONFIRMED / REVIEW_REQUIRED` 三态裁决；
+10. 使用 Chrome Canvas + 64-bit dHash 建立图片感知证据与缓存，并明确硬规格冲突优先级；
+11. 根据真实商城失败数据定位并修复最终规格重复，而不是发明 SKU 数量上限；
+12. 将“前 N 个候选”重构为“找到 N 个真正新品”；
+13. 实现多目标模糊找货、候选展示、人工选号、只抓所选商品；
+14. 使用商品类型词段和真实店铺分类实现可解释的分类路由；
+15. 改进终端单屏交互，并隐藏会误导用户的内部候选池数字；
+16. 将历史状态从版本目录 JSON 重构成 GitHub / 可删除 Release / 外部 SQLite 三生命周期架构；
+17. 增加 run/export 账本、商城确认、高水位、健康锚点、checkpoint、备份和显式恢复。
 
-`archive/version-packets/` contains **compact project-history packets**, not full production releases. Each packet records milestone notes, original local artifact identity/SHA256, and a source/config file index.
+## 3. 历史版本归档
 
-They intentionally avoid committing duplicated ~47MB runtime bundles and exclude production/user state.
+`archive/version-packets/` 保存的是**紧凑项目历史包**，不是完整生产 Release。每个 packet 记录对应版本的里程碑、原本地完整 artifact 名称/SHA256，以及源代码/配置文件索引。
 
-## Portfolio claim language
+这样做是为了：
 
-Recommended:
+- 保留版本 provenance；
+- 避免把 17 份大量重复的约 47MB Node/runtime 二进制直接塞进 Git；
+- 避免把真实商家状态混进求职公开仓库。
 
-> “Reverse-engineered and progressively rebuilt an inherited merchant migration tool into a stateful product-discovery and entity-deduplication system, validating decisions against real mall import evidence.”
+`v2.5.1` 在聊天和代码演进中有明确证据，但当前没有保存一份独立的最终完整 artifact。因此 archive 明确记录这一缺口，不伪造不存在的 binary SHA 或 packet。
 
-Avoid:
+## 4. 求职时建议使用的表述
 
-> “Built the original Weidian exporter entirely from scratch.”
+推荐：
 
-That distinction makes the project stronger: the work demonstrates inherited-system analysis, contract discovery, uncertainty management, safe iteration and operational state design.
+> **“接手一个已有但接近黑箱的商家商品迁移工具，完成证据驱动逆向和持续重构，并用真实商城导入数据反复验证和修正方案，最终把它演进成具有商品发现、实体去重、持久状态和恢复能力的本地业务系统。”**
+
+不建议：
+
+> “我从零写了最初的微店导出器。”
+
+这个边界并不会削弱项目，反而更接近真实工程工作：它展示了**接手遗留系统、发现契约、管理不确定性、用证据纠错、安全迭代和状态治理**的能力。

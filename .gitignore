@@ -1,0 +1,30 @@
+# User data: NEVER commit
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+state.db
+历史中心/
+migration_seed/
+每日导出/
+*.xlsx
+!runtime/shitimoban.xlsx
+
+# Runtime/vendor binaries are built into Releases, not source control
+runtime/node.exe
+runtime/node_modules/
+
+# Runtime state / logs
+cache/
+logs/
+last_error.txt
+last_prepare.log
+
+# Local merchant defaults
+config/default_shop.local.json
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

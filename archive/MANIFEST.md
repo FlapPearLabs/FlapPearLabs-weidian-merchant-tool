@@ -1,8 +1,10 @@
-# Archive Manifest
+# 归档清单
 
-Each GitHub packet preserves the identity of a formal local release without committing ~47MB duplicated runtimes.
+**中文** | [English](MANIFEST.en.md)
 
-| Version | GitHub packet SHA256 | Packet size | Local full artifact SHA256 | Full size |
+每个 GitHub packet 用于保存一个正式本地 Release 的身份，而不是为每个版本重复提交约 47MB 的 Node/runtime 内容。
+
+| 版本 | GitHub packet SHA256 | Packet 大小 | 本地完整 artifact SHA256 | 完整包大小 |
 |---|---|---:|---|---:|
 | v1.0 | `50a4ca6acbea05cf0aeea5d96cbb4fd6057fbe34a385b5c66fb33c55a839a57a` | 1,675 | `b819b9bc2488dac947c9521f1b0dd15175fe87138a72627b73fccfb01b1c9315` | 46,516,956 |
 | v1.1 | `719a7cd9c9f86de2feba0218d9b8bd27dee671a076fc0d299656bc8fea40c9fd` | 1,751 | `407963ff38e724c984480b727d42fa075a6ad61ad6aaad1e1fc0974610eb0485` | 46,769,707 |
@@ -22,8 +24,10 @@ Each GitHub packet preserves the identity of a formal local release without comm
 | v2.5 | `4ddcfe77f9befe3bf611ee6126ed3f51e1a0450ec9801f9e1d7af0ab64d3a407` | 2,165 | `4fbd543bfbaaef0e857e13ee39ab48f90df1ecdc0bc48146902782d8fcb1a60b` | 46,882,673 |
 | v2.6 | `bfd811fdf5e0e7c622716877929330b447a057264e46fc7a00d26aa460828102` | 2,571 | `0719448c71f49e21bc390fd728be4ef1450e5ecc660079db3b8777ec23ea623c` | 46,896,284 |
 
-### v2.5.1 note
+## 关于 v2.5.1
 
-`v2.5.1` is a real point-release stage documented by the conversation/code evolution: it corrected the misleading 200/148 internal-candidate UX and added ZIP temporary-directory launch protection. A standalone final full artifact was not preserved in the current Library/archive, so this manifest intentionally **does not invent a binary SHA or packet** for it. Its behavior and rationale are preserved in `docs/PROJECT_EVOLUTION.md` and `docs/DECISION_TRACE_FROM_DIALOGUE.md`.
+`v2.5.1` 是聊天记录与代码演进中有明确证据的 point release：它修正了 200/148 内部候选池造成的误导性界面，并增加 ZIP 临时目录启动保护。
 
-The packet itself contains the full local artifact filename/SHA256 and a source/config file index. Full release binaries are intentionally not committed; the inherited third-party original client is also not redistributed.
+但当前 Library/archive 中没有保留一份独立最终完整 artifact，因此这里刻意**不伪造 v2.5.1 的 binary SHA 或 packet**。它的行为和决策原因保存在 `docs/PROJECT_EVOLUTION.md` 与 `docs/DECISION_TRACE_FROM_DIALOGUE.md`。
+
+每个 packet 自身会记录对应本地完整 artifact 的文件名/SHA256，以及源代码/配置索引。完整 Release 二进制不会重复提交；继承的第三方原始客户端也不会在这个公开求职仓库里重新分发。

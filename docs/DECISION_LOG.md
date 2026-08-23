@@ -1,125 +1,201 @@
 # Decision Log — High-Leverage Product & Engineering Decisions
 
-This file records decisions that materially changed the project direction. Each entry preserves the **problem, rejected shortcut, chosen design, and why**.
+每条记录保存：**问题 → 容易走的捷径 → 用户/证据提出的纠正 → 最终设计 → 为什么**。
+
+## D00 — Establish evidence levels before modifying an inherited black box
+
+对未知第三方工具，先按 `VERIFIED / INFERRED / UNKNOWN` 管理结论；静态恢复优先，不修改原包、不把猜测写成事实。
+
+逆向路径：文件 → EXE → DAT → load chain → recovered runtime → Playwright/API → Excel → runtime probe。
+
+---
 
 ## D01 — Reverse-engineer first; do not rewrite an unknown working tool
 
-**Problem.** A legacy exporter already worked in production-like usage, but its architecture and data contracts were unknown.
+**Rejected:** 直接从零复制表面功能。
 
-**Rejected shortcut.** Discard it and rebuild from assumptions.
+**Chosen:** 恢复 boot chain、business runtime、API path 和 Excel lineage，再决定哪些地方重构。
 
-**Decision.** Recover the boot chain and business runtime first. Analysis established a .NET launcher feeding decrypted PowerShell/ESM JavaScript into PowerShell/Node, with Playwright + ExcelJS handling Weidian access and Excel output.
+**Why:** 真实兼容细节已经存在于遗留系统中；先理解能减少重新制造边界 bug。
 
-**Why.** Rewriting first would discard already-solved compatibility details and blur new regressions with inherited behavior.
+---
 
-## D02 — Treat a real successful mall import as the golden contract
+## D02 — Use read-only probes when static reasoning reaches an external-system boundary
 
-**Problem.** The target mall is externally implemented and its import internals are unknown.
+静态恢复后仍不知道真实 API shape / 页面 category seed / 商城当前存量时，不继续猜，写只读探针捕获真实 JSON。
 
-**Rejected shortcut.** Infer semantics from column names, e.g. assuming the category column must contain `[新品上市]`.
+**Principle:** 最小只读实验 > 长篇推理。
 
-**Decision.** Compare generated workbooks against a historical file that demonstrably imported successfully. Lock the upload sheet to the observed contract: 31 headers, data from row 2, category blank, Chinese text retained, product status `放置仓库`.
+---
 
-**Principle.** For an opaque integration, **observed successful behavior outranks plausible field semantics**.
+## D03 — Treat a real successful mall import as the golden contract
 
-## D03 — Stop automation at “warehouse,” not “live to customers”
+商城内部不可见时，真实成功 workbook 比字段语义更可信。最终锁定 31 列、row2 data、分类空、`放置仓库`、中文文本保留。
 
-**Decision.** Preserve `放置仓库`. Operators still change price, stock, discounts, categories and content before publication.
+---
 
-**Why.** The cost of exposing unreviewed migrated products is higher than one deliberate human review step.
+## D04 — Stop automation at `放置仓库`
 
-## D04 — Separate “find what I mean” from “is this already the same product?”
+价格、库存、折扣、分类和内容仍需商家确认。自动化的正确边界不是“全部自动上线”，而是把高重复劳动自动化后保留最后业务审核。
 
-Fuzzy search and deduplication have opposite error profiles.
+---
 
-```text
-natural-language intent
-    ↓
-high-recall candidates
-    ↓
-human selection
-    ↓
-full product evidence
-    ↓
-high-precision dedupe
-```
+## D05 — Reconcile historical Excel at product level before building dedupe
 
-Search ranks plausible candidates. Deduplication fetches full detail/SKU, compares against history, and allows `REVIEW_REQUIRED`. Auto-selecting a fuzzy result would confuse user intent with entity identity.
+**Problem:** 5,000+ 导入记录 vs ~1,600 current products 看似巨大缺口。
 
-## D05 — Prefer deterministic evidence over fashionable NLP complexity
+**Rejected:** 直接推断几千商品丢失。
 
-**Rejected shortcut.** Add Chinese tokenizers, embeddings, a vector DB or LLM classification before evidence shows they are necessary.
+**Evidence:** 5,278 SKU/data rows grouping 后 ≈1,628 products；8 批进一步构成 1,721 historical entities。
 
-**Decision.** Use exact IDs, regex-extracted hard specs, normalization, character 2/3-grams, character-bag similarity, edit distance, and manual review for ambiguity.
+**Impact:** 得到覆盖“工具出现以前”的历史基线，后续所有新抓取都可以对真正全历史去重。
 
-**Why.** At a few thousand historical products, even full comparison is cheap. Complexity should be purchased only when real errors justify it.
+---
 
-## D06 — Use dHash as an independent sensor, but never override hard specs
+## D06 — Optimize human effort before CPU effort
 
-Use browser Canvas to compute a 64-bit dHash and Hamming distance, reusing Chrome/Playwright rather than adding OpenCV/TensorFlow. A hard conflict such as `30ml != 60ml` vetoes “same product” even if the image hash matches perfectly.
+用户明确纠正早期“用索引减少比较”的方向：程序多算几十万/上百万次没关系，真正会随着商品数爆炸的是人工筛重。
 
-## D07 — Optimize human effort before CPU effort
+因此不采用激进 candidate pruning 决定新品；完整候选和完整历史充分比较。
 
-An early indexing idea would reduce full-history comparisons. The business constraint was the opposite: program time is cheap; manual duplicate hunting becomes expensive as the catalog grows.
+---
 
-**Decision.** Compare fully fetched candidates against the complete relevant historical set when needed. `100 × 1,700` or `200 × 5,000` comparisons are acceptable on commodity hardware.
+## D07 — Product identity is multi-evidence, not a title hash
 
-## D08 — Do not perform semantic dedupe from lightweight candidate records
+最终五类证据：
 
-Lightweight records often contain only item ID, title and add time. “兰蔻菁纯面霜” does not reveal 15/30/60ml or variant details.
+1. exact itemId / skuId / product code；
+2. hard specs；
+3. normalized title；
+4. character-level fuzzy / order tolerance；
+5. image dHash。
 
-**Decision.** Lightweight phase may skip exact historical source IDs, but product-level dedupe waits for full detail/SKU evidence.
+输出三态：`DUPLICATE_CONFIRMED / NEW_CONFIRMED / REVIEW_REQUIRED`。
 
-## D09 — Do not convert correlation into a mall rule
+---
 
-A 450-row import had exactly two failures; two products also had unusually high SKU counts.
+## D08 — Do not trust image URLs as image identity
 
-**Rejected shortcut.** Invent a “max 30/50 SKU” limit and split products.
+同一图片可能经过 CDN 换域名、换分辨率、JPEG/WebP 重编码。URL 相同可作强证据，URL 不同不能推出图片不同。
 
-**Evidence.** Mall failure data later showed `规格已存在`: two duplicate final specification strings inside one product.
+因此复用 Chrome Canvas 计算 64-bit dHash 和 Hamming distance，并缓存结果。
 
-**Decision.** Canonicalize final mall spec strings; merge identical rows or report conflicts. Keep the product as one SPU.
+**Evidence hierarchy:** hard-spec conflict vetoes image similarity。
 
-**Lesson.** A neat correlation is not a contract.
+---
 
-## D10 — Define true incremental output in business terms
+## D09 — Deliberately reject tokenizer/embedding until real errors justify them
 
-“Latest 100” originally meant take 100 candidates, dedupe, export the remainder. If 80 were old, only 20 new products were delivered.
+用户主动追问 tokenizer / 自定义词典是否会过度工程化。
 
-**Decision.** If the operator asks for N new products, continue scanning/fetching until N `NEW_CONFIRMED` products are found or the candidate horizon is exhausted.
+**Rejected:** tokenizer、embedding、vector DB、heavy vision stack 作为默认方案。
 
-## D11 — Control request budget instead of trying to win against rate limits
+**Chosen:** regex hard specs + compact aliases + char n-grams + char bag + edit distance + dHash + human review。
 
-Full-shop scans and aggressive retries produced socket hangups / HTTP2 protocol errors.
+**Why:** catalog scale 可控，允许少量 review；复杂度应该由真实误判样本购买。
 
-**Decision.** Make category-latest and bounded intelligent windows the normal path; add cooldowns and stop after repeated failures. Later, route fuzzy queries into likely shop categories before scanning.
+---
 
-## D12 — Historical identity is user data, not release-package data
-
-Early versions carried JSON history in the program folder and searched nearby “sibling” versions for the largest/newest baseline.
-
-**Decision.** First move to a fixed `%LOCALAPPDATA%` history center; then replace fragmented JSON with one SQLite `state.sqlite3` outside every release folder.
-
-**Invariant.** Updating or deleting a program version must never reset product identity history.
-
-## D13 — Separate GitHub / Release / SQLite lifecycles
+## D10 — Separate discovery, intent confirmation, deep fetch, and dedupe
 
 ```text
-GitHub     = source and version history
-Release    = disposable executable snapshot
-SQLite     = persistent merchant business state
+multi-target fuzzy search
+→ ranked candidate lists
+→ human selects IDs
+→ only selected products get full detail/SKU
+→ high-precision historical dedupe
 ```
 
-Putting `.git` inside a deletable release folder is contradictory; putting SQLite in Git is also wrong because it is binary, private, and high-churn.
+搜索高召回，去重高精度；模糊 top1 不能替用户确认意图。
 
-## D14 — “Export succeeded” is not “mall import succeeded”
+---
 
-A generated Excel proves the tool prepared a batch, not that the mall accepted it.
+## D11 — Use type fragments for low-risk category routing, not brand hardcoding
 
-**Decision.** v2.6 records export batches separately and allows explicit operator confirmation from `PREPARED` to `MALL_IMPORTED`.
+没有建立 Tommy/CK/Hollister 品牌百科表，而是用“卫衣/短裤/人字拖/面霜”等高信息量商品类型词和当前真实分类评分。
 
-## D15 — Detect state regression explicitly, then recover; never silently reset
+high → top category；medium → top 1–2；low → full-shop fallback。
 
-v2.6 adds SQLite integrity checks, an internal high-water mark, external health anchor, daily/checkpoint backups, run/export ledgers, and explicit recovery.
+**Why:** routing 只缩小请求面，不负责最终商品身份，因此适合简单、可解释、有 fallback 的 heuristic。
 
-**Failure policy.** If persistent state is missing/corrupt/behind a known high-water mark, **fail closed** rather than creating an empty history and continuing.
+---
+
+## D12 — Real latest means `addTime`, not API list order
+
+真实列表发现 API 顺序与 `addTime` 不严格一致。
+
+因此 latest = lightweight `itemId/itemName/addTime` index → sort → expensive fetch only for chosen candidates。
+
+---
+
+## D13 — Control request budget instead of retrying harder
+
+大量全店扫描和激进 retry 触发 socket hang up / HTTP2 错误。
+
+**Decision:** category-latest、bounded windows、cooldowns、continuous-failure stop、category routing。
+
+---
+
+## D14 — Do not convert correlation into a mall rule
+
+450 行中失败 2 行，同时两个 SPU SKU 很多，曾出现“设 30 SKU 阈值并拆商品”的诱人方案。
+
+真实失败数据是 `规格已存在`；回放找到两个 duplicate final spec strings。
+
+**Fix:** spec canonicalization；450 → 448；不拆 SPU。
+
+---
+
+## D15 — Define incremental output in business terms
+
+用户要“100 个真正新品”，不是“检查 100 个候选”。
+
+因此继续深抓和去重直到 `NEW_CONFIRMED == N` 或候选 horizon 耗尽。
+
+---
+
+## D16 — UI should show business progress, not scary internal candidate-pool numbers
+
+目标只要 5 个新品时，200/148 这种内部候选数字让用户误以为会抓几百件；实际可能只深核 15 件。
+
+**Decision:** 主 UI 只强调 target / deep checked / new found；内部池保留在诊断日志。
+
+---
+
+## D17 — “Sibling-version history inheritance” is a migration shim, not architecture
+
+早期版本会在附近 v1.8/v2.0/v2.3/v2.4 中寻找最大/最新 JSON 历史。
+
+用户明确指出：如果删掉旧版本，系统仍应正常。
+
+**Decision:** fixed LOCALAPPDATA center → v2.5 SQLite single source of truth；永久取消 sibling scanning。
+
+---
+
+## D18 — Separate GitHub / Release / SQLite lifecycles
+
+第一版甚至把 `.git` 放进可删除 v2.5 目录；用户发现删程序会连 Git 仓库一起删，进一步暴露生命周期混淆。
+
+最终：
+
+```text
+GitHub = source/version history
+Release ZIP = disposable executable snapshot
+SQLite = persistent merchant business state
+```
+
+---
+
+## D19 — Export success is not mall-import success
+
+Excel QA PASS 只能证明 `PREPARED`，不能证明商城已接受。
+
+v2.6 用显式 operator confirmation 转成 `MALL_IMPORTED`。
+
+---
+
+## D20 — Detect state regression and fail closed
+
+SQLite 状态丢失/回滚不能静默从空历史继续。
+
+v2.6 加：`quick_check`、foreign-key check、internal high-water、external health anchor、daily/checkpoint backups、run/export ledgers、explicit recovery。

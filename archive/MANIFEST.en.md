@@ -1,0 +1,33 @@
+# Archive Manifest
+
+[中文](MANIFEST.md) | **English**
+
+Each GitHub packet preserves the identity of a formal local release without committing roughly 47MB of duplicated runtime content per version.
+
+| Version | GitHub packet SHA256 | Packet size | Local full artifact SHA256 | Full size |
+|---|---|---:|---|---:|
+| v1.0 | `50a4ca6acbea05cf0aeea5d96cbb4fd6057fbe34a385b5c66fb33c55a839a57a` | 1,675 | `b819b9bc2488dac947c9521f1b0dd15175fe87138a72627b73fccfb01b1c9315` | 46,516,956 |
+| v1.1 | `719a7cd9c9f86de2feba0218d9b8bd27dee671a076fc0d299656bc8fea40c9fd` | 1,751 | `407963ff38e724c984480b727d42fa075a6ad61ad6aaad1e1fc0974610eb0485` | 46,769,707 |
+| v1.2 | `eb664f3350ed56c65ff7dc5069b3de4aabf5516426cdd826e32c1ae93397236c` | 1,759 | `2152048abde495d5d420fdee7f750794a5586dec68d27bd53dd5b195d512f02e` | 46,694,844 |
+| v1.3 | `7b68be4d522976522891a338089bb9d5ba554ed4661464962f63c1c368167863` | 1,754 | `40f93adf81b4fec7b9084bd84d9f3c940f469403dc0716e48abdb03c9b77d85c` | 46,799,832 |
+| v1.4 | `5a6a1b31fd976a61695899042af303c5c5ce079bbb5910790ea32a050eeb3a8b` | 1,883 | `dccf5b0d5db606b78d382629e961508493d952792dbc5d8ac8b50bd3b0146e45` | 46,534,337 |
+| v1.5 | `bc3d5c3c082d77139e532a620335b0d78cf49137bb428aef6f9790b6b7b7fdcf` | 1,780 | `6c9ef32ff8602b1cc6e470b8ac68e3b15142aa2f42c2770060dab5d6a5adef53` | 46,801,441 |
+| v1.6 | `294dd47dc347ae85c160ebfe30b940366403b3cd19010156f4c8bdfe94dee329` | 1,790 | `30afc160ad01888cff56b79ed931a0665a568f2f1e28fc1fd63f601d23811fc8` | 46,663,373 |
+| v1.7 | `d266a4f8b8d9e74a103d6b0e104e014c6c5223dcc6ae3b1fd055dca68f6ad512` | 1,827 | `85e4f6013d72c5aa0ce074314076d6ba34438e432b5175c77b5fa4b9f930f7ba` | 46,808,418 |
+| v1.8 | `5553ca78871f7d9212be7e9e55271a3724ac3a768252aca1cd0e07e08ed3fa6c` | 1,837 | `a9962b9b550862a2d1e5869d157b780001d6f6eedf69a7be042cd76fd9a224be` | 46,812,636 |
+| v1.9 | `4fc3e261190fbb5bf3f411c86a6b8fc8480bf3d36783edfbe17f950b6c7f0afa` | 2,060 | `4600be97673686ef4424060281c1c1a1a71840e6909b330338d106de1165a96d` | 47,425,088 |
+| v2.0 | `5254c986731bf9aadb0d6747eab99345a23d07b6c654bd5a5e413c2993a7117c` | 2,171 | `4f294c79b21c53c38c5980d3ecd1e8f2c04a3b082be7322e91a08306e1ef123c` | 47,429,856 |
+| v2.1 | `f0c677b5980999dbfeea76904d0858c3dbc2cdf3b87eefb94b5189af6d2c5715` | 2,190 | `8a502e91362b153cb521c184c9cd02773ccae6d1fbbec74f42523693d451fb05` | 47,441,968 |
+| v2.2 | `c91f66fd623074419dbacda7fafc345e0dcdb600327b8411963bb1715ac1d56c` | 2,152 | `64eb00677add8abc777176a8eb048720b2f2e94322309a58e370db45a5e0c041` | 47,447,743 |
+| v2.3 | `b773331cc5ea285c7416246595286b254c3000fa4c42850a6b05b63bc9a604f1` | 2,232 | `ee557ebe12d3ceeb54cd6cb1eb9802f4cd64d261f77f174de6c6fc73993c1985` | 47,449,565 |
+| v2.4 | `50d05925f2665f593dfdeaa6d2ff069754cc8f89670ecf2ec27c15d4ac22a7ea` | 2,197 | `c65bae7fdd12cf49bbc233571c5b532c61f822f7de2f150116507f031be9fb8d` | 47,451,043 |
+| v2.5 | `4ddcfe77f9befe3bf611ee6126ed3f51e1a0450ec9801f9e1d7af0ab64d3a407` | 2,165 | `4fbd543bfbaaef0e857e13ee39ab48f90df1ecdc0bc48146902782d8fcb1a60b` | 46,882,673 |
+| v2.6 | `bfd811fdf5e0e7c622716877929330b447a057264e46fc7a00d26aa460828102` | 2,571 | `0719448c71f49e21bc390fd728be4ef1450e5ecc660079db3b8777ec23ea623c` | 46,896,284 |
+
+## v2.5.1 note
+
+`v2.5.1` is a real point-release stage documented by the conversation and code evolution. It corrected the misleading 200/148 internal-candidate UX and added ZIP temporary-directory launch protection.
+
+A standalone final full artifact was not preserved in the current Library/archive. This manifest therefore intentionally **does not invent a binary SHA or packet** for v2.5.1. Its behavior and rationale are preserved in `docs/PROJECT_EVOLUTION.en.md` and `docs/DECISION_TRACE_FROM_DIALOGUE.en.md`.
+
+Each packet contains the corresponding local artifact filename/SHA256 and a source/config index. Full release binaries are intentionally not committed, and the inherited third-party original client is not redistributed.

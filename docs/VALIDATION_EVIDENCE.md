@@ -1,207 +1,204 @@
-# Validation Evidence
+# 验证证据
 
-这份文档只记录有证据支持的结论，并区分真实运行、离线回归/压力测试和环境限制。
+**中文** | [English](VALIDATION_EVIDENCE.en.md)
 
-## 1. Legacy-package static recovery
+这份文档区分：**真实观察证据、离线回归/压力测试证据，以及已知环境限制。**
 
-纯静态阶段确认：
+## 1. 遗留软件包静态恢复
 
-- 8KB `.NET Framework 4.0` C# protected launcher；
-- `engine.dat / launcher.dat` 使用受保护容器，恢复出 PowerShell 与 ESM JavaScript runtime；
-- engine 恢复后约 29KB minified JS，格式化到约 1,390 行后可读；
+纯静态分析确认：
+
+- 一个约 8KB 的 `.NET Framework 4.0` C# 保护启动器；
+- `engine.dat / launcher.dat` 中受保护 payload 被恢复成 PowerShell 和 ESM JavaScript runtime 逻辑；
 - Node.js + Playwright + ExcelJS；
-- 微店公开 H5 list/category/SKU/detail 数据链；
-- 31-column mall workbook model。
+- 微店公开 H5 list/category/SKU/detail 数据路径；
+- 31 列商城 workbook 模型。
 
-这些结果不等于恢复原作者 Git source、comments 或真实变量名；仓库只声称恢复了运行时逻辑和语义级结构。
+本项目**不声称**恢复了原作者 Git 历史、注释、TypeScript 源码或真实变量/函数名称。
 
-## 2. Runtime probe evidence
+## 2. 运行时探针证据
 
-Windows 只读 capture 拿到真实 list/SKU/detail response：
+Windows 只读 runtime capture 拿到真实 list/SKU/detail response，验证：
 
 - 商品列表链可用；
-- SKU 详情链可用；
+- SKU 链可用；
 - 商品详情和图片链可用；
 - 列表价格与 SKU 最低价 /100 对齐；
 - 列表库存与 SKU 库存求和对齐；
-- 某些商品没有结构化 `attrList`，原 runtime 依赖 `skuInfo.title` fallback 形成 `[规格:...]`；
-- 分类读取 0 件的根因不是分类 API 报错，而是首页没有触发原作者等待的 category seed 请求。
+- 部分商品没有结构化 `attrList`，原 runtime 会正确使用 `skuInfo.title` 作为 `[规格:...]` fallback；
+- “分类读取 0 件”的根因不是简单分类 API 报错，而是首页不再触发原作者等待的 category seed 请求。
 
-这是从“静态推断 API contract”升级到“真实 2026 runtime contract”的关键证据。
+## 3. 真实商城导入黑盒契约
 
-## 3. Mall import contract — real black-box validation
+一份已知真实导入成功的 workbook 证明：
 
-真实成功导入 workbook 证明：
+- 第 1 行是 31 列表头；
+- 第 2 行开始真实商品数据；
+- 商品分类留空；
+- 商品状态是 `放置仓库`；
+- 中文源文本保留；
+- 模板说明/辅助/示例行不能混进真正上传表。
 
-- 31 headers in row 1；
-- product data starts row 2；
-- category blank；
-- product status `放置仓库`；
-- Chinese source text retained；
-- template/helper/example rows不能混入真正上传表。
+单商品 golden-template 实验成功进入商城导入后的处理流程。
 
-单商品 golden-template 实验成功进入商城后处理流程。
+## 4. 历史 Excel 对账：行数不是商品数
 
-## 4. Historical Excel reconciliation: rows are not products
-
-后台历史一度显示 5,000+，当前商品约 1,600。如果直接相减会得到错误结论。
+后台曾显示 5,000+ 历史导入记录，而当前商城约 1,600 商品。直接相减会得到错误结论。
 
 实际解析：
 
-- 7 份 distinct historical import files：**5,278 data/SKU rows ≈ 1,628 product groups**；
-- 8 batches for baseline reconstruction：**1,729 raw groups → 1,721 title+carousel historical entities**。
+- 7 份不同历史导入表：**5,278 个 SKU/data rows → 约 1,628 个商品组**；
+- 用于历史基线的 8 批数据：**1,729 raw groups → 1,721 个历史实体**。
 
-因此巨大差异的核心是统计口径：SKU/data rows ≠ product/SPU count。
+巨大差异的核心是统计口径：SKU/data rows 不等于 SPU/商品数。
 
-这批 Excel 也成为商品级去重的历史事实来源。
+这批 Excel 同时成为商品级去重的历史事实来源。
 
-## 5. Five-layer dedupe — real v2.0 run
+## 5. 五层去重：v2.0 真实运行
 
-| Metric | Result |
+| 指标 | 结果 |
 |---|---:|
-| Candidates | 100 |
-| Automatic historical duplicates | 79 |
-| Review required | 1 |
-| Confirmed new | 20 |
-| New-product SKU rows | 122 |
-| 31-column QA | PASS |
-| Required-field problems | 0 |
-| Baseline | 1,721 → 1,741 |
+| 候选商品 | 100 |
+| 自动确认历史重复 | 79 |
+| 待人工确认 | 1 |
+| 确认新品 | 20 |
+| 新品 SKU 行 | 122 |
+| 31 列 QA | PASS |
+| 必填字段问题 | 0 |
+| 历史基线 | 1,721 → 1,741 |
 
-79 automatic duplicates evidence mix：
+79 个自动重复的证据构成：
 
-- 52 exact item/SKU/code；
-- 13 normalized-title exact without hard conflict；
-- 12 normalized title + same main-image URL；
-- 2 changed-title cases recovered by dHash evidence。
+- 52 个精确 item/SKU/code；
+- 13 个标题标准化完全一致且无硬规格冲突；
+- 12 个标题标准化 + 同主图 URL；
+- 2 个标题发生变化但被 dHash 证据找回。
 
-人工 Review 只有 1 件，说明保守三态在这批真实数据上把人工量压到很低。
+这次真实运行只有 1 件进入人工 Review。
 
-## 6. Image URL vs dHash evidence
+## 6. 图片 URL 与 dHash 证据
 
-URL normalization 是一层证据，但不同 CDN 可以给同一画面不同地址。
+URL 标准化有价值，但不同 CDN URL 仍可能代表同一画面。
 
-Implementation regression：
+回归测试：
 
 ```text
-same synthetic image
+同一张合成图
 → PNG
-→ re-encoded JPEG
-→ Chrome Canvas decode
+→ 重新编码 JPEG
+→ Chrome Canvas 解码
 → 64-bit dHash
 → Hamming Distance = 0
 ```
 
-这验证 dHash 比文件字节和 URL 更接近“画面身份”。
+硬规格冲突仍然拥有否决权：30ml vs 60ml 即使图片完全相同，也不能自动判为同一商品。
 
-Hard-spec conflict remains veto：30ml vs 60ml 即使图相同，也不能自动判重复。
+v2.5 首次 SQLite 初始化观察到 **1,740 个 dHash** 被持久化到统一数据中心。
 
-v2.5 首次 SQLite 迁移观察到 **1,740 dHash** 被持久化到统一数据中心。
+## 7. 商城失败根因回归
 
-## 7. Mall failure root-cause regression
-
-Observed mall result：
+真实商城结果：
 
 ```text
-450 rows submitted
-448 success
-2 failed
+提交 450 行
+448 成功
+2 失败
 ```
 
-两个高-SKU SPU 曾让“SKU 数量上限”成为候选假设，但没有直接编码。
+两个商品又恰好 SKU 数很多，因此“隐藏 SKU 数量上限”一度是很诱人的候选假设，但没有直接写成规则。
 
-真实 failure CSV：`规格已存在`。
+真实失败 CSV 报错：`规格已存在`。
 
-Replay：
+回放结果：
 
 ```text
 450 input SKU rows
-→ 2 duplicated final mall specification strings
-→ 448 canonical rows
+→ 找到 2 个重复最终规格
+→ 448 canonical output rows
 ```
 
-精确解释实际 448/2，不需要人为拆 SPU。
+它精确解释实际 448/2，而不需要拆 SPU。
 
-## 8. Full-history stress test
+## 8. 全历史压力测试
 
 ```text
-500 synthetic candidates
-× 1,722 historical entities
-≈ 861,000 pair comparisons
+500 个合成新品候选
+× 1,722 个历史实体
+≈ 861,000 对比较
 ```
 
-Result：
+结果：
 
 - 500/500 `NEW_CONFIRMED`；
-- 0 false duplicates；
-- 0 unnecessary reviews；
-- ~25.9s in test Linux environment。
+- 0 false duplicate；
+- 0 unnecessary review；
+- 测试 Linux 环境约 25.9 秒。
 
-这支持“宁可 CPU 多比，不用激进索引牺牲可靠性”的业务取舍。
+这支持当前规模下“不为了性能引入激进近似裁剪”的取舍。
 
-## 9. Fuzzy search + category routing — real v2.3 run
+## 9. v2.3 模糊搜索 + 分类路由真实运行
 
-Five apparel-related target descriptions：
+五个服饰相关目标：
 
-- all high-confidence routed to real `衣服鞋帽`；
-- scan surface roughly 660～680 category items vs 2,000+ whole shop；
-- multiple targets shared one category scan；
-- user selected 5 candidates；
-- five-layer dedupe blocked 1 historical duplicate；
-- output **4 new products / 40 SKU rows**；
-- history **1,741 → 1,745**。
+- 5 个全部高置信路由到真实 `衣服鞋帽` 分类；
+- 扫描面从全店 2,000+ 降到分类约 660～680；
+- 多个目标复用一次分类扫描；
+- 用户选择 5 个候选；
+- 五层去重挡掉 1 个历史重复；
+- 最终导出 **4 个新品 / 40 个 SKU 行**；
+- 历史 **1,741 → 1,745**。
 
-这证明 routing layer 真实减少请求，并未绕过 human selection / final dedupe。
+这证明路由真实减少了请求，同时没有绕过人工选号和最终去重。
 
-## 10. True-N-new behavior
+## 10. 真正 N 个新品行为
 
-Synthetic regression：
+合成回归：
 
 ```text
-candidate pool 300
-80% duplicates
-new target 20
+候选池 300
+重复率 80%
+目标新品 20
 ```
 
-在第 100 个候选处达到：80 duplicates + 20 new，立即停止；剩余 200 不再深抓。
+检查到第 100 个候选时得到 80 重复 + 20 新品，达到目标后立即停止，剩余 200 个不再深抓。
 
-这验证“目标新品数”与“候选池大小”解耦。
+这证明“目标新品数”和“候选池大小”已经解耦。
 
-## 11. SQLite migration and state continuity
+## 11. SQLite 初始化与状态连续性
 
-First v2.5 unified-data-center initialization：
+v2.5 首次统一数据中心初始化真实观察：
 
-- historical products: **1,745**；
-- dHash: **1,740**；
-- same-shop history: **104**；
-- database outside version folder；
-- daily backup created。
+- 历史商品：**1,745**；
+- dHash：**1,740**；
+- 同店历史：**104**；
+- 数据库位于程序版本目录外；
+- 自动创建每日备份。
 
-之后再次实际运行新增 5 件，重启后：
+后续真实运行又新增 5 件，关闭进程再重新启动后：
 
-- products: **1,750**；
-- dHash: **1,747**；
-- same-shop history: **109**。
+- 商品：**1,750**；
+- dHash：**1,747**；
+- 同店历史：**109**。
 
-说明状态已跨程序进程持续，不再依赖旧 `历史中心` 或 sibling version folders。
+说明状态已经跨进程持续，不再依赖旧 Release 目录。
 
-## 12. v2.6 state correctness tests
+## 12. v2.6 状态正确性测试
 
-v2.6 adds / tests：
+v2.6 加入并验证：
 
-- SQLite `quick_check` / foreign key check；
-- product high-water rollback detection；
-- external `health_anchor.json` rollback detection；
-- `runs` ledger；
-- `export_batches`；
-- `PREPARED → MALL_IMPORTED` manual confirmation；
+- SQLite `quick_check` / 外键检查；
+- 商品历史高水位回滚检测；
+- 外部 `health_anchor.json` 整库回滚检测；
+- `runs` 运行账本；
+- `export_batches` 导出账本；
+- `PREPARED → MALL_IMPORTED` 人工确认；
 - checkpoint backup；
-- recovery with emergency pre-restore backup。
+- 恢复前 emergency backup。
 
-## 13. Known limits / deliberately scoped claims
+## 13. 已知限制与刻意收窄的声明
 
-- 某些 ChatGPT/Linux 环境无法稳定访问 `thor.weidian.com`，不把失败的远程测试声称为 live E2E。
-- 商城内部 importer 源码未知，契约来自真实黑盒成功/失败行为。
-- category routing 只是 request-reduction heuristic；低置信必须 fallback。
-- matcher 不声称消灭全部 ambiguity；`REVIEW_REQUIRED` 是设计的一部分。
-- fuzzy matcher 不包装成“AI semantic search”；它是刻意保持轻量的字符级 retrieval。
+- 某些 ChatGPT/Linux 环境无法稳定访问 `thor.weidian.com`，这些失败的远程测试不会被写成成功 live E2E。
+- 目标商城内部 importer 源码未知，契约来自真实黑盒成功/失败行为。
+- 分类路由只是降低请求量的 heuristic，不是语义真相；低置信必须 fallback。
+- 去重系统不声称消灭所有 ambiguity，`REVIEW_REQUIRED` 是设计的一部分。
+- 字符级 fuzzy matcher 不包装成“LLM 语义搜索”。

@@ -68,7 +68,10 @@ file inventory
 | **v2.3** | Category routing | 商品类型词段 → 当前真实分类；低置信全店兜底 | 路由只缩空间，不冒充语义真相 |
 | **v2.4** | Terminal UX | 单屏原位候选选择 | 内部状态不应该无限刷给用户 |
 | **v2.5** | State lifecycle | GitHub / Release / SQLite 分离；dHash 进入 DB | 废弃“兄弟版本继承历史”长期机制 |
+| **v2.5.1** | Incremental UX correction | 隐藏吓人的 200/148 内部候选池主展示；改为 target / deep checked / new progress；检测 ZIP 临时目录启动 | 算法内部队列不应该成为商家的业务心智负担 |
 | **v2.6** | Operational correctness | runs/export_batches、高水位、health anchor、checkpoint、恢复 | 状态必须可证明连续、可审计、可恢复 |
+
+> v2.5.1 是聊天/代码演进中明确存在的 point release；当前 archive 没有独立保存一份完整 v2.5.1 artifact，因此不伪造对应 binary packet。
 
 ---
 

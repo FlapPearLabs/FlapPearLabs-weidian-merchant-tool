@@ -252,6 +252,7 @@ PREPARED
 | **v2.3** | 分类路由 | 商品类型词段 → 真实分类；低置信才全店；固定历史中心 |
 | **v2.4** | 终端 UX | 单屏原位选号，不让候选列表无限刷屏 |
 | **v2.5** | 状态架构 | GitHub / Release / SQLite 分离；取消兄弟版本继承 |
+| **v2.5.1** | 增量 UX 修正 | 目标 5 件时不再把 200/148 内部候选当成业务数量刷屏；主界面改看目标/核验/新品进度；增加 ZIP 临时目录启动保护 |
 | **v2.6** | 运行正确性 | runs/export_batches、商城确认、高水位、健康锚点、checkpoint、恢复 |
 
 每个正式版本均有 compact archive packet：[`archive/version-packets/`](archive/version-packets/)。

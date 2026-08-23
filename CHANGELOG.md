@@ -1,100 +1,117 @@
-# Changelog
+# 版本变更记录
 
-## v2.6.0 — Operational correctness
+**中文** | [English](CHANGELOG.en.md)
 
-- Add schema-v2 run ledger and export-batch ledger.
-- Add `PREPARED → MALL_IMPORTED` explicit mall confirmation.
-- Add SQLite integrity/foreign-key checks, internal product high-water mark and external health anchor.
-- Add checkpoint backups and explicit recovery workflow.
-- Add operator-facing history/status report.
-- Add startup diagnostics showing recent run/export and state health.
-- Keep request/identity logic from v2.5 while increasing observability and recoverability.
+## v2.6.0 — 运行正确性与恢复能力
 
-## v2.5.0 — State architecture baseline
+- SQLite 升级到 Schema 2，加入 `runs` 运行账本和 `export_batches` 导出批次账本。
+- 明确区分 `PREPARED → MALL_IMPORTED`，Excel 生成成功不再等同于商城实际导入成功。
+- 加入 SQLite `quick_check`、外键检查、内部商品高水位和数据库外健康锚点。
+- 加入 checkpoint 备份、每日备份和显式恢复流程。
+- 增加面向使用者的历史/状态报告和启动健康信息。
 
-- Establish GitHub as source-code/version source of truth.
-- Establish `%LOCALAPPDATA%\WeidianMerchantTool\data\state.sqlite3` as the single persistent business-state source of truth.
-- Move product history, image dHash cache, and same-shop history into SQLite.
-- One-time import from the old fixed `%LOCALAPPDATA%\WeidianMerchantTool\历史中心`; no sibling-version discovery afterwards.
-- Release folders become stateless and deletable; `.git` and user state stay outside them.
+## v2.5.1 — 增量模式 UX 修正
 
-## v2.4 — Operator UX
+- 最新新品任务的主进度改成“目标新品数 / 已深度核验 / 已确认新品”。
+- 不再把 200 / 148 这类内部候选池数字当成主业务数量展示，避免让人误以为会抓几百件。
+- 增加 ZIP 临时解压目录启动保护，避免从 Windows 临时目录运行后第二次启动找不到 `run.ps1`。
 
-- Single-screen in-place candidate selection with non-TTY fallback.
-- Preserve v2.3 routing, fuzzy ranking, dedupe and persistent-history semantics unchanged.
+> 这是聊天与代码演进中明确存在的 point release，但当前 archive 没有保存单独最终完整 artifact，因此不伪造 binary SHA 或版本包。
 
-## v2.3 — Category-routed fuzzy search
+## v2.5.0 — 状态架构基线
 
-- Route high-confidence product fragments to actual shop categories before scanning.
-- Fall back to whole-shop search when category confidence is insufficient.
-- Preserve partial lightweight search progress on network interruption when possible.
-- Move rolling history to a fixed `%LOCALAPPDATA%` center independent of the program directory.
+- GitHub 成为代码和版本历史的事实源。
+- `%LOCALAPPDATA%\WeidianMerchantTool\data\state.sqlite3` 成为业务状态的单一事实源。
+- 商品历史、主图 dHash 缓存、同店历史统一进入 SQLite。
+- 只在首次初始化时从旧固定历史中心导入；此后永久取消兄弟版本目录扫描。
+- Release 目录变成无状态、可删除；`.git` 和用户数据都不放在里面。
 
-## v2.2 — Multi-target fuzzy discovery
+## v2.4 — 操作界面
 
-- Natural-language target list, fuzzy ranking, pagination and numeric selection.
-- Deep-fetch and five-layer dedupe happen only after user selection.
+- 候选选号改为单屏原位刷新，并保留非 TTY 环境兼容回退。
+- 不改动 v2.3 已验证的分类路由、模糊排序、五层去重和持久历史逻辑。
 
-## v2.1 — True incremental N-new acquisition
+## v2.3 — 分类路由模糊搜索
 
-- Continue past duplicates until N truly new products are found or candidate horizon ends.
-- Add session-local provisional baseline to prevent within-run duplicate output.
+- 模糊搜索前先把高置信商品类型词段路由到当前店铺真实分类。
+- 分类置信度不足时才回退全店搜索。
+- 多个目标命中同一分类时共享一次分类扫描。
+- 网络中断时尽量保留已经获得的轻量候选。
+- 滚动历史移到固定 `%LOCALAPPDATA%` 中心，与程序目录分离。
 
-## v2.0 — Dynamic baseline + real duplicate-spec fix
+## v2.2 — 多目标模糊找货
 
-- Advance the historical baseline only after export QA succeeds.
-- Reproduce and fix the mall `规格已存在` failure via per-product final-spec deduplication.
-- Add regression/stress evidence around dedupe, dHash and Excel output.
+- 支持一行一个自然语言目标。
+- 增加字符级模糊排序、分页、数字选择和多选。
+- 只有用户选中的商品才进入详情/SKU深抓和五层去重。
 
-## v1.9 — Five-layer product entity dedupe
+## v2.1 — 真正的 N 个新品
 
-- Exact ID/SKU/code evidence.
-- Hard spec conflict extraction.
-- Normalized-title comparison.
-- Character-level fuzzy matching.
-- Browser Canvas 64-bit dHash evidence.
-- Three-state verdict: duplicate / new / review required.
-- Reconstruct a 1,721-entity historical baseline from prior mall imports.
+- 遇到历史重复后继续向后找，直到凑够 N 个真正新品或候选范围耗尽。
+- 加入本轮会话临时基线，避免一次运行内部重复输出。
 
-## v1.8 — Request-budget control
+## v2.0 — 动态历史 + 真实重复规格修复
 
-- Bounded intelligent latest windows and category-latest as normal path.
-- Longer cooldowns and active stop after repeated network failure.
+- 只有导出 QA 成功后才推进历史基线。
+- 根据商城真实 `规格已存在` 失败数据，加入单商品最终规格去重。
+- 增加去重、dHash、Excel 输出的回归和压力测试。
 
-## v1.7 — Category+latest and retry experiments
+## v1.9 — 五层商品实体去重
 
-- Add category+latest mode, checkpoints and multi-channel retries.
-- Real runs exposed the cost of aggressive full-shop scanning/retries.
+- 从历史商城导入 Excel 重建 1,721 个历史商品实体。
+- 精确 ID/SKU/商品编码证据。
+- 容量、重量、数量、尺寸、色号、型号等硬规格冲突。
+- 标题标准化。
+- 字符级模糊与换序容错。
+- Chrome Canvas 64-bit dHash 图片证据和缓存。
+- 三态结果：确认重复 / 确认新品 / 待人工确认。
 
-## v1.6 — Real latest ordering
+## v1.8 — 请求预算控制
 
-- Sort by Weidian `addTime` rather than relying on API list order.
-- Separate lightweight list index from detail/SKU/image fetch.
+- 有限智能最新窗口和分类最新成为日常默认路径。
+- 增加更长冷却和连续网络失败主动停止。
 
-## v1.5 — Latest-product mode
+## v1.7 — 分类最新与重试实验
 
-- Add recent-product workflow independent of a full historical crawl.
+- 增加分类+最新、checkpoint、多通道重试。
+- 真实运行暴露激进全店扫描/重试会增加网络不稳定。
 
-## v1.4 — Verified mall Excel contract
+## v1.6 — 真实最新排序
 
-- Adopt a real successful import workbook as golden structure.
-- 31 headers; data from row 2; category blank; Chinese text preserved; status `放置仓库`.
+- 使用微店 `addTime` 排序，不再相信接口列表顺序就是绝对最新。
+- 轻量列表索引和详情/SKU/图片深抓分离。
 
-## v1.3 — Clean upload workbook
+## v1.5 — 最新商品模式
 
-- Remove template notes/examples from upload sheet.
-- Separate upload-ready artifact from helper files.
+- 增加不依赖全店历史抓取的近期商品工作流。
 
-## v1.2 — Keyword OR and launcher stability
+## v1.4 — 已验证商城 Excel 契约
 
-- Correct multi-keyword semantics from AND to OR.
-- Add alias handling and keep terminal visible on failures.
+- 用真实成功导入 workbook 作为黄金结构。
+- 锁定 31 列、row2 开始数据、分类留空、中文原文、状态 `放置仓库`。
 
-## v1.1 — Multi-mode discovery
+## v1.3 — 干净上传表
 
-- Category, whole-shop keyword, category+keyword and specific-item modes.
-- Add first global history ledger.
+- 上传 Excel 清除模板说明和示例行。
+- 上传产物与辅助文件分离。
 
-## v1.0 — Controlled category export
+## v1.2 — 多关键词 OR 与启动稳定性
 
-- Read real shop categories and export a specified source category.
+- 多关键词语义从 AND 修为 OR。
+- 增加别名处理和失败时终端不闪退。
+
+## v1.1 — 多模式商品发现
+
+- 分类、全店关键词、分类+关键词、指定商品四类模式。
+- 加入第一版全局历史账本。
+
+## v1.0 — 指定分类导出
+
+- 读取真实微店分类并导出指定来源分类。
+
+## Pre-v1.0 — 证据驱动逆向阶段
+
+- 恢复遗留包 EXE/DAT/启动链和业务 runtime。
+- 建立函数级和字段级数据流。
+- 加入商品列表/SKU/详情/分类行为的只读运行时探针。
+- 在继续功能开发前，先通过真实商城导入结果验证集成契约。

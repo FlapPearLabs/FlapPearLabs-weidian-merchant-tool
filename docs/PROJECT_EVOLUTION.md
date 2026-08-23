@@ -1,158 +1,145 @@
-# Project Evolution — Legacy Baseline → v2.6
+# 项目演化：从遗留基线到 v2.6
 
-> 这不是简单 changelog，而是项目的产品/工程演进史。早期版本并非当时就存在完整 Git tag，因此这里保存的是经聊天记录、版本 artifact 和运行证据重建出的关键路径。
+**中文** | [English](PROJECT_EVOLUTION.en.md)
 
-## Phase 0 — Before v1.0: make the inherited black box understandable
+这是一份产品/工程演进史，不声称所有历史版本在当时就已经有正式 Git tag。版本线根据聊天记录、历史 artifact、代码状态和真实运行证据重建。
 
-### 0A. Static recovery
+## 阶段 0 — v1.0 以前：先把遗留黑箱变得可理解
 
-项目起点是第三方 `微店商品导出器-v1.2.0-客户版`。第一步没有运行或修改，而是：
+### 静态恢复
+
+项目起点是第三方 `微店商品导出器-v1.2.0-客户版`。第一步不是加功能，而是：
 
 ```text
-file inventory
-→ hashes
-→ EXE technology
-→ DAT container
-→ loading chain
-→ runtime recovery
+文件普查
+→ 哈希固化
+→ EXE 技术栈
+→ DAT 容器
+→ 加载链
+→ runtime 恢复
 ```
 
-决定性结果：
+决定性发现包括：小型 .NET Framework C# launcher、恢复出的 PowerShell/ESM JavaScript、Node.js + Playwright + ExcelJS、微店公开 H5 list/category/SKU/detail 路径，以及 31 列商城 workbook 模型。
 
-- small .NET Framework C# launcher；
-- `engine.dat / launcher.dat` 解密恢复；
-- launcher → PowerShell；engine → minified ESM JavaScript；
-- Node.js + Playwright + ExcelJS；
-- Weidian public H5 list/category/SKU/detail data path；
-- 31-column mall workbook generation。
+### 函数级与字段级恢复
 
-### 0B. Function-level and field-level recovery
+继续建立函数映射、主流程/启动流程、微店 API 契约、内部数据模型，以及 JSON 字段 → 中间结构 → Excel 列的字段 lineage。恢复出的语义名称不冒充原作者真实源码名称。
 
-不止“知道用什么库”，还继续建立：
+### 运行时探针
 
-- function map；
-- main flow / launcher flow；
-- Weidian API contract；
-- internal data model；
-- field lineage：JSON 字段 → 中间结构 → Excel column。
+通过只读 capture 获取真实 item list / SKU / detail / category behavior，验证静态分析并定位外部行为变化。
 
-恢复语义名称不冒充原作者源码名称；原 Git history / comments / TypeScript source 仍标记为未恢复。
+### 商城黑盒契约
 
-### 0C. Runtime contract probes
-
-做只读 capture：真实 item list / SKU / detail / category behavior；验证价格、库存和 fallback SKU title 结构；定位分类 seed 行为变化。
-
-### 0D. Mall black-box contract
-
-用真实成功导入样本和失败样本建立目标商城契约，而不是根据字段名猜。
+用真实成功/失败导入结果建立目标商城契约，而不是根据字段名猜实现。
 
 ---
 
-## Version matrix
+## 版本矩阵
 
-| Version | Theme | Main change | Key decision / learning |
+| 版本 | 主题 | 核心变化 | 关键认识 |
 |---|---|---|---|
-| **v1.0** | Controlled category export | 读取真实店铺分类、选择分类、按 `cateId` 抓取 | 先把原黑箱变成商家可控制的采集工具 |
-| **v1.1** | Product selection | 分类 / 全店关键词 / 分类+关键词 / 指定 ID/链接；全局 itemId 历史 | “我要搬什么”成为一级能力 |
-| **v1.2** | Search semantics | 多关键词 AND → OR；别名；顶层失败不闪退 | 关键词按运营语义而不是按实现方便解释 |
-| **v1.3** | Clean upload artifact | 上传表与辅助 Excel 分开；去模板说明/示例污染 | 让上传 artifact 成为真正业务产物 |
-| **v1.4** | Verified mall contract | 31列、row2 data、分类空、`放置仓库`、中文原文 | observed success > guessed semantics |
-| **v1.5** | Latest-product workflow | 新增 latest，不要求先全量建立店铺基线 | 真实工作不是“一次搬完整店” |
-| **v1.6** | Real add-time ordering | `addTime`；cheap list index vs expensive detail fetch | 不再把 API 顺序冒充真实上架时间 |
-| **v1.7** | Category+latest / retry | 分类最新、checkpoint、多通道重试 | 暴露“retry harder”会恶化网络问题 |
-| **v1.8** | Request budget | bounded window、cooldown、分类最新日常路径 | 外部 API 可靠性进入产品设计 |
-| **v1.9** | Historical entity resolution | 从历史 Excel 重建 1,721 实体；五层证据；三态输出 | 人工去重才是会随 catalog 爆炸的成本 |
-| **v2.0** | Evidence-driven failure fix | 修复 `规格已存在`；QA 后动态推进历史 | 拒绝“SKU 太多”相关性假设 |
-| **v2.1** | True incremental | 继续向后直到凑够 N 个真正新品 | 业务目标不是 N 个候选 |
-| **v2.2** | Multi-target fuzzy discovery | 多自然语言目标、模糊排序、列表、人工选号、只抓所选 | 搜索和去重拆职责 |
-| **v2.3** | Category routing | 商品类型词段 → 当前真实分类；低置信全店兜底 | 路由只缩空间，不冒充语义真相 |
-| **v2.4** | Terminal UX | 单屏原位候选选择 | 内部状态不应该无限刷给用户 |
-| **v2.5** | State lifecycle | GitHub / Release / SQLite 分离；dHash 进入 DB | 废弃“兄弟版本继承历史”长期机制 |
-| **v2.5.1** | Incremental UX correction | 隐藏吓人的 200/148 内部候选池主展示；改为 target / deep checked / new progress；检测 ZIP 临时目录启动 | 算法内部队列不应该成为商家的业务心智负担 |
-| **v2.6** | Operational correctness | runs/export_batches、高水位、health anchor、checkpoint、恢复 | 状态必须可证明连续、可审计、可恢复 |
+| **v1.0** | 指定分类导出 | 读取真实店铺分类并按 `cateId` 导出 | 把黑箱导出器变成可控制的采集工具 |
+| **v1.1** | 商品选择 | 分类 / 全店关键词 / 分类+关键词 / ID链接 + 全局历史 | “我要搬什么”成为一级能力 |
+| **v1.2** | 搜索语义 | 多关键词 AND → OR；别名；启动器稳定性 | 按商家意图解释关键词，而不是按实现方便 |
+| **v1.3** | 干净上传产物 | 上传表和模板/辅助内容分开 | 真正交付物必须让商城直接接受 |
+| **v1.4** | 商城契约验证 | 31列、row2、分类空、`放置仓库`、中文原文 | 真实成功行为优先于字段语义猜测 |
+| **v1.5** | 最新商品 | 增加不依赖全店抓取的 recent workflow | 真实工作不是每次都搬完整店 |
+| **v1.6** | 真实上架时间 | 用 `addTime`；轻量索引与昂贵深抓分离 | API 列表顺序不是“最新”的证据 |
+| **v1.7** | 分类最新 / 重试实验 | 分类+latest、checkpoint、多通道 retry | 激进扫描/重试会恶化网络可靠性 |
+| **v1.8** | 请求预算 | 有限窗口、冷却、分类最新日常路径 | 外部 API 可靠性成为产品约束 |
+| **v1.9** | 历史实体去重 | 重建 1,721 实体；五层证据；三态裁决 | 真正会扩张的是人工筛重成本 |
+| **v2.0** | 证据驱动故障修复 | 修复 `规格已存在`；QA 后推进历史 | 拒绝“SKU 太多”这个漂亮但错误的假设 |
+| **v2.1** | 真正增量 | 继续向后直到凑够 N 个真正新品 | 业务目标不是 N 个候选 |
+| **v2.2** | 多目标模糊找货 | 多目标、模糊排序、列表、人工选号、只深抓选中项 | 搜索与商品身份有不同错误代价 |
+| **v2.3** | 分类路由 | 商品类型词段 → 当前真实分类；低置信全店兜底 | 路由只缩小范围，不冒充语义真相 |
+| **v2.4** | 终端 UX | 单屏原位候选选择 | 内部状态不应该无限刷给用户 |
+| **v2.5** | 状态生命周期 | GitHub / Release / SQLite 分离；dHash 进数据库 | 兄弟版本继承不能成为长期架构 |
+| **v2.5.1** | 增量 UX 修正 | 隐藏 200/148 内部池主展示；ZIP 临时目录保护 | 算法队列不应该变成业务数量 |
+| **v2.6** | 运行正确性 | runs/export_batches、高水位、健康锚点、checkpoint、恢复 | 状态必须可证明连续、可审计、可恢复 |
 
-> v2.5.1 是聊天/代码演进中明确存在的 point release；当前 archive 没有独立保存一份完整 v2.5.1 artifact，因此不伪造对应 binary packet。
+> `v2.5.1` 在聊天/代码演进中有明确证据，但当前没有独立保存最终完整 artifact，因此 archive 不伪造 binary SHA 或 packet。
 
 ---
 
-## Feature evolution by capability
+## 按能力看演化
 
-### Discovery
+### 商品发现
 
 ```text
-category
-→ keyword OR
-→ category + keyword
-→ item ID/link
-→ addTime latest
-→ category latest
-→ multiple fuzzy targets
-→ routed fuzzy search
+指定分类
+→ 关键词 OR
+→ 分类 + 关键词
+→ 指定 ID / 链接
+→ addTime 最新
+→ 分类最新
+→ 多目标模糊搜索
+→ 分类路由后的模糊搜索
 ```
 
-### Identity
+### 商品身份
 
 ```text
-same itemId only
-→ historical Excel baseline
-→ exact SKU/code
-→ hard specs
-→ normalized title
-→ char fuzzy
-→ main-image URL
+只看 itemId
+→ 历史 Excel 基线
+→ 精确 SKU / 编码
+→ 硬规格
+→ 标题标准化
+→ 字符级模糊
+→ 主图 URL
 → dHash
-→ three-state verdict
+→ 三态裁决
 ```
 
-### State
+### 状态管理
 
 ```text
-per-run / per-category JSON
-→ global JSON history
-→ reconstructed historical baseline
-→ dynamic rolling baseline
-→ fixed LOCALAPPDATA history center
-→ SQLite single source of truth
-→ health / ledgers / checkpoints / recovery
+分类/单次 JSON
+→ 全局 JSON 历史
+→ 重建历史商品基线
+→ 动态滚动基线
+→ 固定 LOCALAPPDATA 历史中心
+→ SQLite 单一事实源
+→ 健康检查 / 账本 / checkpoint / 恢复
 ```
 
-### Reliability
+### 可靠性
 
 ```text
-simple retry
+简单 retry
 → checkpoint
-→ HTTP fallback / lower frequency
+→ 网络 fallback / 降频
 → cooldown / bounded window
-→ category routing
-→ fail-closed state checks
+→ 分类路由
+→ fail-closed 状态检查
 ```
 
 ---
 
-## Important corrections along the way
+## 演进中最重要的纠错
 
-1. **API order ≠ latest** → use `addTime`.
-2. **5,000 import rows ≠ 5,000 products** → SKU/data rows grouped into ~1.6k products.
-3. **URL different ≠ image different** → dHash.
-4. **fuzzy match ≠ user intent** → display candidates and ask user to select.
-5. **fuzzy search ≠ dedupe** → high recall first, high precision later.
-6. **high SKU count ≠ failure cause** → actual error was duplicate final spec.
-7. **latest N candidates ≠ N new products** → goal-seeking incremental loop.
-8. **retrying harder ≠ more reliable** → request budget and routing.
-9. **history inheritance ≠ version architecture** → external SQLite.
-10. **Excel generated ≠ mall accepted** → PREPARED vs MALL_IMPORTED.
-11. **candidate pool ≠ items actually fetched** → UI now focuses on target/deep-checked/new count.
+1. **API 顺序 ≠ 最新** → 使用 `addTime`；
+2. **5,000 导入行 ≠ 5,000 商品** → SKU/data rows 聚合为商品实体；
+3. **URL 不同 ≠ 图片不同** → dHash；
+4. **模糊相似 ≠ 用户意图** → 展示候选并人工选号；
+5. **模糊搜索 ≠ 去重** → 先高召回，再高精度；
+6. **SKU 多 ≠ 失败原因** → 真实错误是重复最终规格；
+7. **最新 N 候选 ≠ N 个新品** → goal-seeking incremental loop；
+8. **retry 更多 ≠ 更可靠** → 请求预算和分类路由；
+9. **历史继承 ≠ 版本架构** → 外部 SQLite；
+10. **Excel 生成 ≠ 商城接受** → `PREPARED` vs `MALL_IMPORTED`；
+11. **candidate pool ≠ 实际深抓商品数** → 主 UI 改成目标/核验/新品进度。
 
 ---
 
-## Deliberately not built
+## 明确没有做的东西
 
 - tokenizer-first pipeline；
-- vector DB / embedding merely for this catalog scale；
-- heavy vision model/GPU；
-- brand→category hardcoded encyclopedia；
-- fuzzy top1 auto-selection；
-- automatic live-to-customer listing；
-- silent state reset on missing history。
+- 仅为了当前商品规模引入 vector DB / embedding；
+- 重型视觉模型 / GPU；
+- 品牌→分类硬编码百科；
+- 模糊 top1 自动替用户选择；
+- 导入后自动直接对消费者上架；
+- 持久历史缺失时静默重置。
 
-这些不是“没做完”，而是明确的复杂度和风险边界。
+这些不是“没做完”，而是明确的复杂度与风险边界。

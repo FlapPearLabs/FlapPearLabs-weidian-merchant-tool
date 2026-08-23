@@ -22,4 +22,8 @@ Each GitHub packet preserves the identity of a formal local release without comm
 | v2.5 | `4ddcfe77f9befe3bf611ee6126ed3f51e1a0450ec9801f9e1d7af0ab64d3a407` | 2,165 | `4fbd543bfbaaef0e857e13ee39ab48f90df1ecdc0bc48146902782d8fcb1a60b` | 46,882,673 |
 | v2.6 | `bfd811fdf5e0e7c622716877929330b447a057264e46fc7a00d26aa460828102` | 2,571 | `0719448c71f49e21bc390fd728be4ef1450e5ecc660079db3b8777ec23ea623c` | 46,896,284 |
 
+### v2.5.1 note
+
+`v2.5.1` is a real point-release stage documented by the conversation/code evolution: it corrected the misleading 200/148 internal-candidate UX and added ZIP temporary-directory launch protection. A standalone final full artifact was not preserved in the current Library/archive, so this manifest intentionally **does not invent a binary SHA or packet** for it. Its behavior and rationale are preserved in `docs/PROJECT_EVOLUTION.md` and `docs/DECISION_TRACE_FROM_DIALOGUE.md`.
+
 The packet itself contains the full local artifact filename/SHA256 and a source/config file index. Full release binaries are intentionally not committed; the inherited third-party original client is also not redistributed.

@@ -1,180 +1,182 @@
-# Portfolio & Interview Notes
+# 求职与面试笔记
 
-## One-line description
+**中文** | [English](PORTFOLIO_NOTES.en.md)
 
-**Reverse-engineered an inherited Weidian-to-mall exporter and evolved it into a stateful product-discovery and entity-resolution system with verified Excel contracts, historical reconciliation, fuzzy search/category routing, five-layer dedupe, SQLite continuity and recovery tooling.**
+## 一句话项目描述
 
-## Resume-ready Chinese
+**把一个继承来的微店→商城 Windows 导出器，经过证据驱动逆向、真实商城验证和持续重构，演进成具有多目标商品发现、五层实体去重、SQLite 持久状态和恢复能力的商家迁移系统。**
+
+## 简历可直接使用版本
 
 > **微店商品迁移与商品实体去重系统｜个人项目 / AI 辅助工程实践**  
-> 接手第三方 Windows 商家导出器后先完成证据驱动逆向：还原 .NET→PowerShell/Node→Playwright→微店公开 API→31 列 Excel 数据链，并通过只读探针和真实商城成功/失败样本校验字段契约。解析历史导入 Excel 后将 5,278 个 SKU/data rows 重建为约 1.6k 商品组，并归并为 1,721 个历史实体；设计 `ID/SKU → 硬规格 → 标题归一化 → 字符模糊 → Chrome Canvas dHash` 五层实体去重和 `REVIEW_REQUIRED` 人工兜底。进一步实现 `addTime` 真最新、N 个真正新品、多目标模糊找货、候选人工选号、商品类型分类路由和请求预算控制；主动放弃 tokenizer/embedding 等过度复杂方案。v2.5 将版本目录历史重构为外部 SQLite 单一状态源，v2.6 增加运行/导出账本、高水位、健康锚点、checkpoint 和显式恢复。真实 100 候选运行自动挡掉 79 个历史重复，仅 1 个需人工确认，20 个新品展开 122 SKU 且 31 列 QA 必填问题为 0。
-
-## Resume-ready English
-
-> **Weidian Merchant Migration & Entity Resolution System** — Reverse-engineered an inherited Windows exporter into a maintainable data path (.NET launcher → PowerShell/Node → Playwright → public Weidian APIs → verified 31-column mall Excel). Reconciled 5,278 historical SKU/data rows into ~1.6k product groups and a 1,721-entity baseline; built five-layer entity resolution (IDs/SKUs, hard specs, normalized text, character fuzzy matching, browser-Canvas dHash) with explicit review fallback. Added true-N-new incremental acquisition, multi-target fuzzy discovery with human selection, category routing and request-budget controls while deliberately avoiding unnecessary tokenizer/embedding complexity. Separated source/releases from persistent SQLite merchant state and added ledgers, health anchors, checkpoints and recovery.
+> 接手第三方 Windows 商家导出器后先完成证据驱动逆向：还原 `.NET → PowerShell/Node → Playwright → 微店公开 API → 31 列 Excel` 数据链，并通过只读探针和真实商城成功/失败样本校验字段契约。解析历史导入 Excel 后将 5,278 个 SKU/data rows 重建为约 1.6k 商品组，并归并为 1,721 个历史实体；设计 `ID/SKU → 硬规格 → 标题归一化 → 字符模糊 → Chrome Canvas dHash` 五层实体去重和 `REVIEW_REQUIRED` 人工兜底。进一步实现 `addTime` 真最新、N 个真正新品、多目标模糊找货、人工选号、商品类型分类路由和请求预算控制；主动放弃 tokenizer/embedding 等不必要复杂度。v2.5 将版本目录历史重构为外部 SQLite 单一状态源，v2.6 增加运行/导出账本、高水位、健康锚点、checkpoint 和显式恢复。真实 100 候选运行自动挡掉 79 个历史重复，仅 1 个需人工确认，20 个新品展开 122 SKU 且 31 列 QA 必填问题为 0。
 
 ---
 
-# Strongest interview stories
+# 最值得讲的面试故事
 
-## Story 1 — Reverse engineering without losing the business problem
+## 故事 1 — 逆向黑箱，但始终围绕业务链而不是“炫技反编译”
 
-**Situation:** inherited encrypted Windows package; unclear whether core was EXE, Node, browser automation or template magic.
+**背景：** 接手的是一个加密 Windows 包，一开始甚至不知道核心是在 EXE、Node、浏览器自动化还是 Excel 模板里。
 
-**Action:** static-first evidence chain: file inventory → EXE → DAT → loader → runtime → API → Excel; then function-level and field-level lineage; finally runtime probes.
+**行动：** 按“文件普查 → EXE → DAT → 加载链 → runtime → API → Excel”的证据链推进，然后继续做到函数级、字段级 lineage，最后用真实 runtime probe 验证。
 
-**Result:** converted “black box exporter” into an explainable system where a Weidian JSON field could be traced to a mall Excel column.
+**结果：** 把“能运行但看不懂”的导出器变成可解释系统，可以追踪某个微店 JSON 字段最终进入商城 Excel 哪一列。
 
-**Signal:** inherited-system analysis, evidence hierarchy, ability to avoid premature rewrites.
-
----
-
-## Story 2 — Correcting a 5,000-vs-1,600 data illusion
-
-**Situation:** historical import count 5,000+ looked incompatible with ~1,600 current mall products.
-
-**Wrong conclusion available:** thousands of products were lost.
-
-**Action:** download/parse all historical Excel, group SKU rows into product groups, compare with current inventory probe.
-
-**Result:** 5,278 rows ≈1,628 product groups; later 1,721 historical entities. The apparent huge data loss largely disappeared.
-
-**Signal:** data-definition discipline, reconciliation, resisting metric-label assumptions.
+**体现能力：** 遗留系统接手、证据层级、避免过早重写、把技术调查和业务目标对齐。
 
 ---
 
-## Story 3 — Designing dedupe around human cost, not CPU cost
+## 故事 2 — 把“5000 vs 1600”的数据假象纠正成正确口径
 
-**Situation:** as history grew, manual duplicate review became the real scaling bottleneck.
+**背景：** 历史后台显示 5,000+ 导入记录，而当前商城只有约 1,600 商品，很容易理解成“丢了几千件”。
 
-**Initial optimization idea:** aggressive indexes / fingerprints to avoid full comparisons.
+**错误结论：** 直接把导入行数当商品数。
 
-**Correction:** if approximate pruning risks misses, machine time is cheaper than human rework.
+**行动：** 把能取得的历史 Excel 全部解析，按商品级 grouping，再和当前库存探针结果对账。
 
-**Result:** full relevant history comparison at manageable scale; stress tested ~861k pairs without false duplicate/review in the synthetic new set.
+**结果：** 5,278 行实际约对应 1,628 个商品组；后续 8 批进一步归并成 1,721 个历史商品实体。
 
-**Signal:** optimization objective selection, product economics, reliability-first engineering.
-
----
-
-## Story 4 — Why dHash was added even though image URLs already existed
-
-**Situation:** historical Excel already had main-image URLs.
-
-**Problem:** URL identity is not visual identity; different CDNs/re-encodings can point to the same image.
-
-**Action:** reuse Chrome/Canvas to decode pixels and compute 64-bit dHash; no OpenCV/TensorFlow/GPU.
-
-**Result:** same image PNG→JPEG had Hamming distance 0; real v2.0 dedupe used dHash to recover changed-title duplicates.
-
-**Signal:** independent evidence sources, pragmatic image processing, reuse of existing runtime.
+**体现能力：** 指标口径意识、数据 reconciliation、避免被字段名称和表面数字误导。
 
 ---
 
-## Story 5 — Deliberately not adding tokenizer / embedding
+## 故事 3 — 去重优化的是人工成本，不是 CPU 成本
 
-**Situation:** product names contain Chinese/English brands, order changes and marketing noise.
+**背景：** 商品越来越多以后，人工从历史库里筛重复才是真正会爆炸的工作。
 
-**Available solution:** tokenizer + custom dictionary + embeddings/vector DB.
+**最初方向：** 考虑用更激进索引/指纹减少完整比较次数。
 
-**Decision:** reject until real errors justify it; use hard specs, compact aliases, normalization, char n-grams, edit distance, dHash and human Review.
+**关键纠正：** 如果近似索引可能遗漏，机器多算一会儿远比让商家重新人工筛重便宜。
 
-**Why:** at 1.7k–5k history size, deterministic comparison is cheap and easier to debug; long-tail ambiguity can be surfaced rather than hidden behind semantic confidence.
+**结果：** 在当前规模下保留完整相关历史比较；压力测试约 `500 × 1,722 ≈ 861k` 对商品。
 
-**Signal:** complexity budgeting, knowing when *not* to use AI.
-
----
-
-## Story 6 — Search high recall, dedupe high precision
-
-**Situation:** operator knows approximate product descriptions, often multiple at once.
-
-**Action:** one target per line → fuzzy ranked candidates → manual number selection → only selected detail/SKU fetch → five-layer dedupe.
-
-**Why:** fuzzy top1 should not be allowed to define user intent.
-
-**Signal:** human-in-the-loop architecture and error-profile separation.
+**体现能力：** 找对优化目标、理解人力成本、可靠性优先于过早性能优化。
 
 ---
 
-## Story 7 — Category routing as a low-risk heuristic
+## 故事 4 — 为什么已经有图片 URL，还要加 dHash
 
-**Situation:** multi-target fuzzy search across 2,000+ shop items caused many requests.
+**背景：** 历史 Excel 已经带主图 URL。
 
-**Action:** extract product-type fragments and score against live shop categories; high confidence routes one category, medium top two, low full-shop fallback.
+**问题：** URL 身份不等于图片身份。不同 CDN、尺寸、JPEG/WebP 重编码可能让同一张图拥有完全不同 URL 和文件字节。
 
-**Result:** five apparel targets routed to ~660–680-item `衣服鞋帽`; one scan reused for all targets.
+**行动：** 复用现有 Chrome/Canvas，把图片解码为像素后统一成 9×8，计算 64-bit dHash，不引入 OpenCV、TensorFlow、GPU。
 
-**Signal:** systems optimization without increasing business-decision risk.
+**结果：** 同一画面 PNG→JPEG 回归得到 Hamming Distance = 0；真实去重中 dHash 也帮助识别标题变化后的历史重复。
 
----
-
-## Story 8 — Two failures and refusing to invent a hidden SKU limit
-
-**Situation:** 450 SKU rows, 448 success, 2 failure; high-SKU products looked suspicious.
-
-**Tempting fix:** split products above 30/50 SKU.
-
-**Action:** inspect actual failure data.
-
-**Result:** `规格已存在`; exactly two duplicate spec rows; canonicalization reproduced 448 rows without splitting SPUs.
-
-**Signal:** root-cause analysis, resisting confirmation bias.
+**体现能力：** 多证据融合、复用现有基础设施、投入很小但增加一条独立视觉证据。
 
 ---
 
-## Story 9 — “Latest 100” is a product goal, not a database slice
+## 故事 5 — 明知道 tokenizer / embedding 可以做，但主动不加
 
-**Situation:** first 100 candidates could contain 80 old items.
+**背景：** 商品标题同时有中英文品牌、词序交换、单位差异和营销噪声。
 
-**Insight:** user wants 100 products they do not have.
+**可选方案：** 中文 tokenizer、自定义大词典、embedding、向量数据库。
 
-**Action:** goal-seeking loop until 100 `NEW_CONFIRMED` or horizon exhausted.
+**决策：** 先不加。使用硬规格、少量别名、标题归一化、字符 n-gram、编辑距离、dHash 和人工 Review。
 
-**Signal:** translate implementation metrics into business outcomes.
+**原因：** 1.7k～5k 历史规模下确定性比较成本不高，而且更可解释、更容易调试；长尾不确定性可以直接暴露为 `REVIEW_REQUIRED`。
 
----
-
-## Story 10 — From sibling-version history to SQLite lifecycle separation
-
-**Situation:** releases searched nearby old version folders for the newest/largest JSON history.
-
-**User challenge:** deleting v1.8/v2.0/v2.3 should not threaten merchant history.
-
-**Action:** GitHub=code; Release=disposable; SQLite=persistent state. A first attempt to put `.git` inside the release was also rejected because deleting the release would delete Git history.
-
-**Result:** version upgrades no longer migrate merchant identity data.
-
-**Signal:** lifecycle modeling, architecture correction from first principles.
+**体现能力：** 复杂度预算，以及知道什么时候**不应该**用 AI。
 
 ---
 
-## Story 11 — Internal candidate pool vs operator mental model
+## 故事 6 — 搜索高召回，去重高精度
 
-**Situation:** goal=5 new products, UI displayed 200/148 candidates and looked as if hundreds would be fetched; actual deep checks stopped around 15.
+**背景：** 商家知道大概想找什么，但描述并不精确，而且经常一次找多个商品。
 
-**Decision:** show target / checked / found in primary UI; keep internal pool only for diagnostics.
+**行动：** 一行一个目标 → 模糊排序 → 展示候选 → 人工输入编号 → 只深抓选中商品 → 五层去重。
 
-**Signal:** UX as systems abstraction, not cosmetic formatting.
+**原因：** 模糊 top1 只能说明“像”，不能替用户确认“这就是我想要的”。
+
+**体现能力：** human-in-the-loop、不同错误代价分层、把搜索和实体身份问题拆开。
 
 ---
 
-# Why relevant to AI Product / Agent / FDE
+## 故事 7 — 把分类路由设计成低风险 heuristic
 
-- evidence-backed decisions rather than confident guessing;
-- explicit UNKNOWN / REVIEW state;
-- multimodal-ish evidence fusion without unnecessary model complexity;
-- human confirmation at intent and business-success boundaries;
-- persistent state across runs;
-- request-budget handling under unreliable external systems;
-- observability and recovery;
-- ability to inherit, understand and improve an existing customer workflow.
+**背景：** 多目标模糊搜索如果每次扫全店 2,000+ 件，请求太多。
 
-# What not to oversell
+**行动：** 从目标描述中提取商品类型词段，与当前店铺真实分类名称评分：高置信搜一个、中置信搜前两个、低置信全店兜底。
 
-- Do not call char-level fuzzy search “LLM semantic search”.
-- Do not claim perfect duplicate detection.
-- Do not claim the inherited exporter was authored from scratch.
-- Do not claim the target mall internal importer is known.
-- Do not present every historical milestone as an original contemporaneous Git tag.
-- Do emphasize the repeated pattern: **hypothesis → evidence → correction → safer design**.
+**结果：** 5 个服饰目标全部路由到约 660～680 件的 `衣服鞋帽`，而且五个目标复用一次分类扫描。
+
+**关键点：** 没有做 `Tommy → 衣服` 这种品牌硬编码。路由只缩小搜索面，最终仍有人选号和五层去重。
+
+**体现能力：** 在不提高业务误判风险的情况下做系统优化。
+
+---
+
+## 故事 8 — 两个失败，没有发明“隐藏 SKU 上限”
+
+**背景：** 450 个 SKU 行导入，448 成功、2 失败；恰好两个 SPU 的 SKU 数特别多。
+
+**诱人方案：** 猜商城最多支持 30/50 SKU，超过就拆商品。
+
+**行动：** 不编码未验证阈值，继续追真实失败数据。
+
+**结果：** 错误是 `规格已存在`，恰好存在两条重复最终规格；canonicalization 后 450→448，不需要拆 SPU。
+
+**体现能力：** 根因分析、避免 confirmation bias、相关性不升级为业务规则。
+
+---
+
+## 故事 9 — “最新100”不是一个数据库切片，而是一个业务目标
+
+**背景：** 前 100 个最新候选可能有 80 个已经导入过。
+
+**洞察：** 用户要的是“给我 100 个我没有的商品”，不是“帮我检查前 100 条记录”。
+
+**行动：** 逐件深抓去重，直到 100 个 `NEW_CONFIRMED` 或候选范围耗尽。
+
+**体现能力：** 从实现指标切换到用户结果。
+
+---
+
+## 故事 10 — 从“兄弟版本继承历史”重构到 SQLite 生命周期分离
+
+**背景：** 新版本曾经要去附近旧版本目录寻找最大/最新 JSON 历史。
+
+**关键质疑：** 删除 v1.8/v2.0/v2.3 不应该威胁商家历史。
+
+**行动：** 重构成 GitHub=代码、Release=可删除运行包、SQLite=持久业务状态。中间甚至还否决过“把 `.git` 放在可删除 Release 里”的自相矛盾设计。
+
+**结果：** 升级程序不再迁移商品身份历史。
+
+**体现能力：** 生命周期建模、从第一原则纠正架构。
+
+---
+
+## 故事 11 — 200/148 是算法内部队列，不应该成为用户心智
+
+**背景：** 目标只要 5 个新品，终端却出现 200/148 等内部候选数字，看起来像要抓几百件；实际可能深核约 15 件就停止。
+
+**决策：** 主界面只显示目标 / 已核验 / 已找到，内部 pool 留在诊断日志。
+
+**体现能力：** UX 不只是“美化”，而是给复杂系统设计正确抽象。
+
+---
+
+# 为什么这个项目适合 AI 产品 / Agent / FDE / AI 应用岗位
+
+它虽然不是一个 LLM 产品，但体现了很多 Agent-native 的工程模式：
+
+- 用证据区分事实、推断和未知，而不是自信猜测；
+- 显式保留 UNKNOWN / REVIEW 状态；
+- ID、规格、文本、图片多证据共同判断；
+- 在用户意图和业务成功边界保留人工确认；
+- 跨运行、跨版本维护持久状态；
+- 面对不可靠外部 API 做请求预算；
+- 有运行可观测性、checkpoint 和恢复；
+- 能接手一个已经存在的客户工作流，而不是只做绿色地 Demo。
+
+# 求职时不要过度包装
+
+- 不要把字符级 fuzzy search 叫成“LLM 语义搜索”；
+- 不要声称去重 100% 完美；
+- 不要声称第三方原始导出器是自己从零写的；
+- 不要声称掌握目标商城内部 importer 源码；
+- 不要把每个历史版本都说成当时就有正式 Git tag；
+- 应该重点讲清楚反复出现的工作模式：**假设 → 证据 → 纠正 → 更安全的设计。**

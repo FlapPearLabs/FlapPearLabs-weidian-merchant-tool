@@ -1,0 +1,10 @@
+{
+  "name": "weidian-exporter-runtime",
+  "version": "2.5.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "playwright": "1.62.1"
+  }
+}

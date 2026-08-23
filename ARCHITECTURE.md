@@ -1,86 +1,163 @@
 # Architecture — v2.6+
 
-## Sources of truth
+## 1. Three lifecycles
 
 | Concern | Source of truth | Lifecycle |
 |---|---|---|
-| Source code / versions | GitHub | permanent |
-| Historical version packets | GitHub `archive/version-packets` | permanent / review-only |
+| Source / decisions / versions | GitHub | permanent |
 | Runtime package | Release ZIP | replaceable / deletable |
-| Product history | `state.sqlite3` | permanent user data |
-| SKU identities | `state.sqlite3` | permanent user data |
-| Main-image dHash cache | `state.sqlite3:image_hashes` | permanent user data |
-| Same-shop source history | `state.sqlite3:global_history` | permanent user data |
-| State-change audit | `state.sqlite3:events` | append-only |
-| Run ledger | `state.sqlite3:runs` | permanent operational history |
-| Export/mall-confirmation ledger | `state.sqlite3:export_batches` | permanent operational history |
+| Merchant product identity | `state.sqlite3` | permanent user state |
+| dHash cache | `state.sqlite3:image_hashes` | permanent derived state |
+| Same-shop history | `state.sqlite3:global_history` | permanent user state |
+| Run/export audit | SQLite `runs` / `export_batches` | append-oriented operational state |
 | Scan checkpoints | `%LOCALAPPDATA%/.../cache` | disposable |
-| Daily / checkpoint backups | `%LOCALAPPDATA%/.../backups` | recoverability |
-| Excel outputs | Documents/微店商品导出器/每日导出 | user deliverables |
+| Deliverable Excel | Documents/微店商品导出器/每日导出 | user artifact |
 
-## Runtime layout
+The program version directory never owns merchant truth.
 
-```text
-GitHub
-  └─ source / tests / docs / compact history packets
+---
 
-Release ZIP (stateless)
-  └─ runtime / scripts / config examples
-
-%LOCALAPPDATA%\WeidianMerchantTool\
-  ├─ data\state.sqlite3
-  ├─ data\health_anchor.json
-  ├─ backups\state_YYYY-MM-DD.sqlite3
-  ├─ backups\checkpoint_*.sqlite3
-  ├─ cache\...
-  └─ logs\...
-```
-
-## Upgrade contract
-
-1. Program folders never own persistent business state.
-2. Release ZIPs never contain `.git`, `state.sqlite3`, user historical baselines, dHash user cache, same-shop history, or merchant Excel outputs.
-3. v2.5 performs the one-time fixed-history-center import only when SQLite is not initialized.
-4. v2.6+ open the same database directly; schema changes are idempotent in-place migrations.
-5. If persistent state cannot be found/opened safely, fail closed rather than silently resetting.
-6. State health is checked at startup.
-7. Known historical high-water marks must not silently decrease.
-8. Recovery is explicit: preserve the current database as an emergency backup before replacing it from a known-good backup.
-
-## Dedupe evidence flow
+## 2. Acquisition architecture
 
 ```text
-candidate
+shop URL
   ↓
-exact IDs / SKU / product codes
+lightweight list/category APIs
   ↓
-hard-spec extraction and conflict veto
+[category / keyword / ID / latest / fuzzy]
   ↓
-normalized title
+optional category routing
   ↓
-character-level fuzzy comparison
+candidate display / user selection
   ↓
-main-image dHash evidence
+selected item IDs only
   ↓
-DUPLICATE_CONFIRMED / NEW_CONFIRMED / REVIEW_REQUIRED
+full detail + SKU + image evidence
+  ↓
+entity dedupe
+  ↓
+mall Excel
 ```
 
-Important: image similarity never overrides a hard-spec conflict.
+### Lightweight vs deep fetch
 
-## Search vs. dedupe boundary
+Light phase prefers:
 
 ```text
-search: high recall
-natural-language target → category route → fuzzy rank → human selection
-
-identity: high precision
-selected item → full detail/SKU → complete historical comparison → three-state verdict
+itemId
+itemName
+addTime
+category metadata
 ```
 
-## v2.6 state-correctness layer
+Deep phase obtains SKU/spec/price/stock/detail/images only when needed.
 
-- `runs` records target/new counts, deep-checked counts, history before/after and success state.
-- `export_batches` records each prepared Excel batch separately from mall-import confirmation.
-- product high-water metadata and an external health anchor guard against silent state regression.
-- `quick_check` and foreign-key checks guard SQLite integrity.
-- checkpoint/daily backups enable explicit recovery.
+This separation supports `addTime` latest, fuzzy discovery and request-budget control.
+
+---
+
+## 3. Search is not dedupe
+
+```text
+Search
+high recall
+"what might the operator mean?"
+        ↓
+human selection
+        ↓
+Dedupe
+high precision
+"is this the same product entity already in history?"
+```
+
+Search may be fuzzy and approximate. Dedupe must be conservative and can return `REVIEW_REQUIRED`.
+
+---
+
+## 4. Category routing
+
+A thin rule-based routing layer extracts high-information product-type fragments and compares them with live shop category names.
+
+```text
+high confidence   → best category
+medium confidence → top 1–2 categories
+low confidence    → whole-shop fallback
+```
+
+It intentionally avoids brand→category hardcoding and does not decide final product identity.
+
+---
+
+## 5. Five-layer entity resolution
+
+For a fully fetched candidate vs historical entities:
+
+1. **Exact:** itemId / skuId / product code.
+2. **Hard specs:** capacity, weight, quantity, size, color number, model; conflict vetoes duplicate.
+3. **Normalized title:** Unicode/case/punctuation/unit normalization and selected noise removal.
+4. **Character fuzzy:** 2/3-gram, char bag, edit/order tolerance.
+5. **Image evidence:** normalized main-image URL and browser-Canvas 64-bit dHash/Hamming distance.
+
+Final outcomes:
+
+```text
+DUPLICATE_CONFIRMED
+NEW_CONFIRMED
+REVIEW_REQUIRED
+```
+
+### Why dHash
+
+A CDN URL is a locator, not image identity. Different URLs/files may decode to the same visual content. Existing Playwright/Chrome decodes JPEG/PNG/WebP, Canvas normalizes to 9×8 pixels, Node derives the 64-bit dHash. No heavy CV runtime is required.
+
+---
+
+## 6. Historical baseline construction
+
+Historical mall Excel is interpreted at product level, not row level:
+
+```text
+SKU/data rows
+→ group into product/SPU entities
+→ merge exact historical duplicates
+→ canonical historical baseline
+```
+
+This is why 5,278 historical rows do not mean 5,278 products.
+
+---
+
+## 7. SQLite Schema 2
+
+- `meta` — schema, initialization, internal high-water marks.
+- `products` — canonical historical entities used by dedupe.
+- `image_hashes` — image URL → 64-bit dHash / failure cache.
+- `global_history` — per-shop source item identity history.
+- `events` — state-change audit.
+- `runs` — target, scan/deep-check counts, duplicates/reviews/new, history before/after.
+- `export_batches` — Excel batch and `PREPARED / MALL_IMPORTED` status.
+
+---
+
+## 8. Health / recovery
+
+Startup verifies:
+
+1. SQLite `quick_check`;
+2. foreign-key integrity;
+3. internal product high-water monotonicity;
+4. external `health_anchor.json` against whole-DB rollback.
+
+Successful history advancement creates checkpoint backups; daily backups are retained separately. Explicit restore takes an emergency backup first, then intentionally resets the health anchor to the chosen recovery point.
+
+**Failure policy:** fail closed rather than silently creating empty history.
+
+---
+
+## 9. Upgrade contract
+
+1. v2.5 performed the one-time legacy JSON → SQLite transition.
+2. v2.6+ open the same database directly.
+3. Schema migrations are in-place and idempotent.
+4. No sibling-version directory discovery.
+5. Release ZIP contains no `.git`, SQLite, historical product JSON, dHash user cache or merchant Excel state.

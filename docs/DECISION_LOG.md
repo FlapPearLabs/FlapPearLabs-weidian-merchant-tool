@@ -1,201 +1,151 @@
-# Decision Log — High-Leverage Product & Engineering Decisions
+# 关键产品与工程决策记录
 
-每条记录保存：**问题 → 容易走的捷径 → 用户/证据提出的纠正 → 最终设计 → 为什么**。
+**中文** | [English](DECISION_LOG.en.md)
 
-## D00 — Establish evidence levels before modifying an inherited black box
+每条记录尽量保留：**问题 → 容易走的捷径 → 用户/证据提出的纠正 → 最终设计 → 为什么**。
 
-对未知第三方工具，先按 `VERIFIED / INFERRED / UNKNOWN` 管理结论；静态恢复优先，不修改原包、不把猜测写成事实。
+## D00 — 修改遗留黑箱前，先建立证据等级
 
-逆向路径：文件 → EXE → DAT → load chain → recovered runtime → Playwright/API → Excel → runtime probe。
+对未知第三方工具，先用 `VERIFIED / INFERRED / UNKNOWN` 管理结论；静态恢复优先，不修改原包，也不把猜测写成事实。
 
----
+## D01 — 先逆向理解，不先从零重写
 
-## D01 — Reverse-engineer first; do not rewrite an unknown working tool
+**否决捷径：** 只按表面功能重新写一个。
 
-**Rejected:** 直接从零复制表面功能。
+**最终选择：** 先恢复启动链、业务 runtime、API 路径和 Excel lineage，再决定哪些部分重构。
 
-**Chosen:** 恢复 boot chain、business runtime、API path 和 Excel lineage，再决定哪些地方重构。
+**原因：** 遗留系统里已经包含真实业务兼容细节，理解以后再改，能减少重新制造边界 bug。
 
-**Why:** 真实兼容细节已经存在于遗留系统中；先理解能减少重新制造边界 bug。
+## D02 — 静态推理遇到外部系统边界时，用只读探针
 
----
+不知道真实 API shape、category seed 或商城当前库存时，不继续猜，写最小只读 probe 捕获真实 JSON。
 
-## D02 — Use read-only probes when static reasoning reaches an external-system boundary
+**原则：最小真实实验 > 长篇推测。**
 
-静态恢复后仍不知道真实 API shape / 页面 category seed / 商城当前存量时，不继续猜，写只读探针捕获真实 JSON。
+## D03 — 把真实成功商城导入当成黄金契约
 
-**Principle:** 最小只读实验 > 长篇推理。
+商城内部实现不可见时，真实成功 workbook 比“字段名看起来应该是什么意思”更可信。最终锁定 31 列、row2 开始数据、分类留空、`放置仓库`、中文原文保留等行为。
 
----
+## D04 — 自动化停在“放置仓库”，不直接面对消费者
 
-## D03 — Treat a real successful mall import as the golden contract
+价格、库存、折扣、分类和内容仍需商家确认。自动化边界是减少高重复劳动，而不是为了“全自动”直接上线未经检查的商品。
 
-商城内部不可见时，真实成功 workbook 比字段语义更可信。最终锁定 31 列、row2 data、分类空、`放置仓库`、中文文本保留。
+## D05 — 做去重之前，先按商品级重建历史 Excel
 
----
+**问题：** 5,000+ 历史导入记录 vs 约 1,600 current products 看似巨大缺口。
 
-## D04 — Stop automation at `放置仓库`
+**否决：** 直接推断几千商品丢失。
 
-价格、库存、折扣、分类和内容仍需商家确认。自动化的正确边界不是“全部自动上线”，而是把高重复劳动自动化后保留最后业务审核。
+**证据：** 5,278 个 SKU/data rows 聚合后约 1,628 个商品；8 批进一步形成 1,721 个历史实体。
 
----
+**影响：** 后续去重可以覆盖“新工具出现以前”的商家历史，而不是只记从今天开始导过什么。
 
-## D05 — Reconcile historical Excel at product level before building dedupe
+## D06 — 优化人工成本，而不是优先省 CPU
 
-**Problem:** 5,000+ 导入记录 vs ~1,600 current products 看似巨大缺口。
+用户明确纠正了早期“先用索引缩小比较集合”的方向：本地机器多算几十万/上百万次没关系，真正会随着商品量爆炸的是人工筛重。
 
-**Rejected:** 直接推断几千商品丢失。
+因此不让激进 candidate pruning 决定“这是新品”；完整候选在需要时和完整相关历史充分比较。
 
-**Evidence:** 5,278 SKU/data rows grouping 后 ≈1,628 products；8 批进一步构成 1,721 historical entities。
-
-**Impact:** 得到覆盖“工具出现以前”的历史基线，后续所有新抓取都可以对真正全历史去重。
-
----
-
-## D06 — Optimize human effort before CPU effort
-
-用户明确纠正早期“用索引减少比较”的方向：程序多算几十万/上百万次没关系，真正会随着商品数爆炸的是人工筛重。
-
-因此不采用激进 candidate pruning 决定新品；完整候选和完整历史充分比较。
-
----
-
-## D07 — Product identity is multi-evidence, not a title hash
+## D07 — 商品身份是多证据判断，不是标题哈希
 
 最终五类证据：
 
-1. exact itemId / skuId / product code；
-2. hard specs；
-3. normalized title；
-4. character-level fuzzy / order tolerance；
-5. image dHash。
+1. 精确 itemId / skuId / 商品编码；
+2. 硬规格；
+3. 标题标准化；
+4. 字符级模糊 / 换序容错；
+5. 图片 dHash。
 
-输出三态：`DUPLICATE_CONFIRMED / NEW_CONFIRMED / REVIEW_REQUIRED`。
+输出 `DUPLICATE_CONFIRMED / NEW_CONFIRMED / REVIEW_REQUIRED` 三态。
 
----
+## D08 — 不把图片 URL 当成图片身份
 
-## D08 — Do not trust image URLs as image identity
+同一张图可能更换 CDN、尺寸或 JPEG/WebP 编码。URL 相同可以是强证据，URL 不同不能推出图片不同。
 
-同一图片可能经过 CDN 换域名、换分辨率、JPEG/WebP 重编码。URL 相同可作强证据，URL 不同不能推出图片不同。
+因此复用 Chrome Canvas 计算 64-bit dHash 和 Hamming distance，并缓存结果。硬规格冲突优先级更高，可以直接否决图片相似带来的“同商品”结论。
 
-因此复用 Chrome Canvas 计算 64-bit dHash 和 Hamming distance，并缓存结果。
+## D09 — 没有真实误判证据前，不引入 tokenizer / embedding
 
-**Evidence hierarchy:** hard-spec conflict vetoes image similarity。
+用户主动追问 tokenizer、自定义词典会不会过度工程化。
 
----
+**默认不做：** tokenizer、embedding、vector DB、重型视觉栈。
 
-## D09 — Deliberately reject tokenizer/embedding until real errors justify them
+**最终方案：** 硬规格正则 + 少量别名 + 字符 n-gram + 字符 bag + 编辑距离 + dHash + 人工复核。
 
-用户主动追问 tokenizer / 自定义词典是否会过度工程化。
+**原因：** 当前 catalog scale 可控，也允许少量 Review；复杂度应该由真实错误样本购买。
 
-**Rejected:** tokenizer、embedding、vector DB、heavy vision stack 作为默认方案。
-
-**Chosen:** regex hard specs + compact aliases + char n-grams + char bag + edit distance + dHash + human review。
-
-**Why:** catalog scale 可控，允许少量 review；复杂度应该由真实误判样本购买。
-
----
-
-## D10 — Separate discovery, intent confirmation, deep fetch, and dedupe
+## D10 — 把商品发现、意图确认、深抓和去重拆开
 
 ```text
-multi-target fuzzy search
-→ ranked candidate lists
-→ human selects IDs
-→ only selected products get full detail/SKU
-→ high-precision historical dedupe
+多目标模糊搜索
+→ 候选排序列表
+→ 人工选编号
+→ 只深抓选中商品详情/SKU
+→ 高精度历史去重
 ```
 
-搜索高召回，去重高精度；模糊 top1 不能替用户确认意图。
+搜索追求高召回，去重追求高精度；模糊 top1 不能替用户确认意图。
 
----
+## D11 — 分类路由使用商品类型词段，不做品牌硬编码百科
 
-## D11 — Use type fragments for low-risk category routing, not brand hardcoding
+没有建立 `Tommy / CK / Hollister → 某分类` 的品牌表，而是用“卫衣、短裤、人字拖、面霜”等高信息量商品类型词和当前真实分类评分。
 
-没有建立 Tommy/CK/Hollister 品牌百科表，而是用“卫衣/短裤/人字拖/面霜”等高信息量商品类型词和当前真实分类评分。
+高置信搜最佳分类，中置信搜前一两个，低置信回退全店。
 
-high → top category；medium → top 1–2；low → full-shop fallback。
+**原因：** 路由只缩小请求面，不负责最终商品身份，因此适合简单、可解释、有 fallback 的 heuristic。
 
-**Why:** routing 只缩小请求面，不负责最终商品身份，因此适合简单、可解释、有 fallback 的 heuristic。
+## D12 — 真正最新看 `addTime`，不看 API 列表顺序
 
----
+真实列表发现 API 顺序与 `addTime` 并不严格一致，因此 latest 改成轻量 `itemId/itemName/addTime` 索引 → 排序 → 只深抓真正目标候选。
 
-## D12 — Real latest means `addTime`, not API list order
-
-真实列表发现 API 顺序与 `addTime` 不严格一致。
-
-因此 latest = lightweight `itemId/itemName/addTime` index → sort → expensive fetch only for chosen candidates。
-
----
-
-## D13 — Control request budget instead of retrying harder
+## D13 — 控制请求预算，而不是不断增加 retry
 
 大量全店扫描和激进 retry 触发 socket hang up / HTTP2 错误。
 
-**Decision:** category-latest、bounded windows、cooldowns、continuous-failure stop、category routing。
+最终采用分类最新、有限窗口、冷却、连续失败主动停止和分类路由。
 
----
+## D14 — 不把相关性直接写成商城规则
 
-## D14 — Do not convert correlation into a mall rule
+450 行中失败 2 行，同时两个 SPU 的 SKU 很多，曾经出现“设 30/50 SKU 阈值并拆商品”的诱人方案。
 
-450 行中失败 2 行，同时两个 SPU SKU 很多，曾出现“设 30 SKU 阈值并拆商品”的诱人方案。
+真实失败数据是 `规格已存在`，回放找到恰好两个重复最终规格。
 
-真实失败数据是 `规格已存在`；回放找到两个 duplicate final spec strings。
+**修复：** 最终规格 canonicalization；450 → 448；不拆 SPU。
 
-**Fix:** spec canonicalization；450 → 448；不拆 SPU。
+## D15 — 用业务目标定义增量输出
 
----
+用户要“100 个真正新品”，不是“检查 100 个候选”。所以继续深抓和去重，直到 `NEW_CONFIRMED == N` 或候选范围耗尽。
 
-## D15 — Define incremental output in business terms
+## D16 — 主界面展示业务进度，不展示吓人的内部候选池
 
-用户要“100 个真正新品”，不是“检查 100 个候选”。
+目标只要 5 个新品时，200/148 内部数字会让用户误以为程序要抓几百件；实际可能核验到约 15 件就完成。
 
-因此继续深抓和去重直到 `NEW_CONFIRMED == N` 或候选 horizon 耗尽。
+**决策：** 主 UI 只强调目标 / 已深核 / 已找到；内部 pool 留在诊断日志。
 
----
-
-## D16 — UI should show business progress, not scary internal candidate-pool numbers
-
-目标只要 5 个新品时，200/148 这种内部候选数字让用户误以为会抓几百件；实际可能只深核 15 件。
-
-**Decision:** 主 UI 只强调 target / deep checked / new found；内部池保留在诊断日志。
-
----
-
-## D17 — “Sibling-version history inheritance” is a migration shim, not architecture
+## D17 — “兄弟版本继承历史”是迁移兼容，不是长期架构
 
 早期版本会在附近 v1.8/v2.0/v2.3/v2.4 中寻找最大/最新 JSON 历史。
 
-用户明确指出：如果删掉旧版本，系统仍应正常。
+用户明确指出：删掉旧版本以后系统仍应正常。
 
-**Decision:** fixed LOCALAPPDATA center → v2.5 SQLite single source of truth；永久取消 sibling scanning。
+**决策：** 固定 LOCALAPPDATA 历史中心 → v2.5 SQLite 单一事实源；永久取消 sibling scanning。
 
----
+## D18 — GitHub / Release / SQLite 必须分开生命周期
 
-## D18 — Separate GitHub / Release / SQLite lifecycles
-
-第一版甚至把 `.git` 放进可删除 v2.5 目录；用户发现删程序会连 Git 仓库一起删，进一步暴露生命周期混淆。
+中间甚至出现过“把 `.git` 放进可删除 v2.5 目录”的矛盾设计，被用户立即指出：删程序不就把 Git 仓库也删了？
 
 最终：
 
 ```text
-GitHub = source/version history
-Release ZIP = disposable executable snapshot
-SQLite = persistent merchant business state
+GitHub = 代码和版本历史
+Release ZIP = 可删除运行快照
+SQLite = 持久商家业务状态
 ```
 
----
+## D19 — 导出成功不等于商城导入成功
 
-## D19 — Export success is not mall-import success
+Excel QA PASS 只能证明 `PREPARED`，不能证明商城已经接受。v2.6 通过用户显式确认才转成 `MALL_IMPORTED`。
 
-Excel QA PASS 只能证明 `PREPARED`，不能证明商城已接受。
+## D20 — 状态倒退时 fail closed，不静默重置
 
-v2.6 用显式 operator confirmation 转成 `MALL_IMPORTED`。
-
----
-
-## D20 — Detect state regression and fail closed
-
-SQLite 状态丢失/回滚不能静默从空历史继续。
-
-v2.6 加：`quick_check`、foreign-key check、internal high-water、external health anchor、daily/checkpoint backups、run/export ledgers、explicit recovery。
+SQLite 缺失、损坏或回滚不能从空历史悄悄继续。v2.6 加入 `quick_check`、外键检查、内部高水位、外部健康锚点、备份、运行/导出账本和显式恢复。

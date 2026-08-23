@@ -1,41 +1,45 @@
-# Historical Version Packets
+# 历史版本归档包
 
-This directory exists for **project history and portfolio review**, not as the distribution channel for production binaries.
+**中文** | [English](README.en.md)
 
-## Why compact packets instead of every full ~47MB release?
+这个目录用于**项目历史记录和求职作品审查**，不是生产二进制软件的下载渠道。
 
-Historical runtime packages repeatedly bundled the same Node executable and dependency tree. Committing every full binary package would add roughly 800MB of duplicate runtime content and make the repository harder to review.
+## 为什么不用 17 份完整约 47MB Release？
 
-Instead, each formal project version has a **compact version packet ZIP** containing:
+历史运行包反复携带几乎相同的 Node 可执行文件和依赖树。如果把每个完整二进制包全部提交 Git，会额外产生接近 800MB 的重复 runtime，让仓库难以 clone、diff 和审查。
 
-- milestone/version notes;
-- original local artifact filename, size and SHA256;
-- source/config file index from that release.
+因此每个被保留的正式版本使用一个**紧凑 version packet ZIP**，里面记录：
 
-The current repository source remains on `main`; the packets preserve artifact identity and evolution evidence without duplicating full runtimes or user state.
+- 里程碑 / 版本说明；
+- 原本地完整 artifact 文件名、大小和 SHA256；
+- 该 Release 的源码 / 配置文件索引。
 
-These packets are **not runnable releases**.
+当前可维护源码仍以 `main` 为准；历史 packet 负责保存 artifact 身份与版本演化证据，而不重复携带完整 runtime 或用户业务状态。
 
-## Versions
+这些 packet **不是可直接运行的 Release**。
 
-| Packet | Milestone |
+## 已保存版本
+
+| Packet | 里程碑 |
 |---|---|
-| `v1.0` | specified-category exporter |
-| `v1.1` | multi-mode discovery + global history |
-| `v1.2` | keyword OR + launcher stability |
-| `v1.3` | clean upload artifact |
-| `v1.4` | real mall-contract golden format |
-| `v1.5` | latest-product workflow |
-| `v1.6` | `addTime` ordering |
-| `v1.7` | category+latest + retry/checkpoint |
-| `v1.8` | low-frequency / request-budget control |
-| `v1.9` | five-layer entity dedupe |
-| `v2.0` | dynamic baseline + duplicate-spec fix |
-| `v2.1` | true N-new incremental acquisition |
-| `v2.2` | multi-target fuzzy search + selection |
-| `v2.3` | category router + persistent history center |
-| `v2.4` | single-screen selector UX |
-| `v2.5` | GitHub + external SQLite state architecture |
-| `v2.6` | ledgers, health checks, checkpoints, recovery |
+| `v1.0` | 指定分类导出 |
+| `v1.1` | 多模式商品发现 + 全局历史 |
+| `v1.2` | 多关键词 OR + 启动稳定性 |
+| `v1.3` | 干净上传产物 |
+| `v1.4` | 真实商城黄金导入格式 |
+| `v1.5` | 最新商品工作流 |
+| `v1.6` | `addTime` 真实上架时间 |
+| `v1.7` | 分类最新 + retry/checkpoint |
+| `v1.8` | 低频 / 请求预算控制 |
+| `v1.9` | 五层商品实体去重 |
+| `v2.0` | 动态基线 + 重复规格修复 |
+| `v2.1` | 真正 N 个新品 |
+| `v2.2` | 多目标模糊搜索 + 人工选号 |
+| `v2.3` | 分类路由 + 持久历史中心 |
+| `v2.4` | 单屏选号 UX |
+| `v2.5` | GitHub + 外部 SQLite 状态架构 |
+| `v2.6` | 运行账本、健康检查、checkpoint、恢复 |
 
-See `MANIFEST.md` for packet and original-local-artifact hashes. See `docs/PROJECT_EVOLUTION.md` and `docs/DECISION_LOG.md` for the narrative behind each transition.
+`v2.5.1` 在聊天和代码演进中有明确 point-release 证据，但没有独立最终完整 artifact 被保留下来，因此不伪造 binary packet 或 SHA。
+
+哈希与 artifact 对应关系见 [MANIFEST.md](MANIFEST.md)；完整版本路径见 [项目演化](../docs/PROJECT_EVOLUTION.md)；关键取舍见 [对话决策轨迹](../docs/DECISION_TRACE_FROM_DIALOGUE.md)。
